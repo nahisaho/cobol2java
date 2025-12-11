@@ -255,3 +255,71 @@ describe('transformCondition', () => {
     );
   });
 });
+
+describe('CALL statement', () => {
+  it('transforms CALL with literal program name', () => {
+    expect(transformStatement('CALL "SUBPROG"')).toBe('subprog.execute();');
+  });
+
+  it('transforms CALL with variable program name', () => {
+    expect(transformStatement('CALL WS-PROGRAM-NAME')).toBe('wsProgramName.execute();');
+  });
+
+  it('transforms CALL with USING', () => {
+    const result = transformStatement('CALL "CALCULATE" USING WS-INPUT WS-OUTPUT');
+    expect(result).toBe('calculate.execute(wsInput, wsOutput);');
+  });
+});
+
+describe('UNSTRING statement', () => {
+  it('transforms UNSTRING with delimiter', () => {
+    const result = transformStatement('UNSTRING WS-INPUT DELIMITED BY "," INTO WS-PART1 WS-PART2');
+    expect(result).toContain('split(",")');
+    expect(result).toContain('wsPart1');
+    expect(result).toContain('wsPart2');
+  });
+});
+
+describe('File I/O statements', () => {
+  it('transforms OPEN INPUT', () => {
+    expect(transformStatement('OPEN INPUT CUSTOMER-FILE')).toContain('BufferedReader');
+    expect(transformStatement('OPEN INPUT CUSTOMER-FILE')).toContain('FileReader');
+  });
+
+  it('transforms OPEN OUTPUT', () => {
+    expect(transformStatement('OPEN OUTPUT REPORT-FILE')).toContain('BufferedWriter');
+    expect(transformStatement('OPEN OUTPUT REPORT-FILE')).toContain('FileWriter');
+  });
+
+  it('transforms READ INTO', () => {
+    expect(transformStatement('READ CUSTOMER-FILE INTO WS-RECORD')).toContain('readLine()');
+  });
+
+  it('transforms WRITE FROM', () => {
+    expect(transformStatement('WRITE REPORT-REC FROM WS-LINE')).toContain('write');
+  });
+
+  it('transforms CLOSE', () => {
+    expect(transformStatement('CLOSE CUSTOMER-FILE')).toContain('close()');
+  });
+});
+
+describe('SEARCH statement', () => {
+  it('transforms SEARCH (linear)', () => {
+    expect(transformStatement('SEARCH WS-TABLE')).toContain('Linear search');
+  });
+
+  it('transforms END-SEARCH', () => {
+    expect(transformStatement('END-SEARCH')).toBe('}');
+  });
+});
+
+describe('Exception handling', () => {
+  it('transforms ON EXCEPTION', () => {
+    expect(transformStatement('ON EXCEPTION')).toContain('catch');
+  });
+
+  it('transforms END-CALL', () => {
+    expect(transformStatement('END-CALL')).toBe('}');
+  });
+});

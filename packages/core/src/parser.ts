@@ -33,6 +33,9 @@ export interface DataItem {
   value?: string;
   occurs?: number;
   usage?: string;
+  redefines?: string;
+  indexed?: string[];
+  key?: string;
 }
 
 /**
@@ -280,6 +283,52 @@ export class CobolParser {
         dataItem.occurs = parseInt(occursMatch[1]!, 10);
       }
       
+      // Check for REDEFINES
+      const redefinesMatch = upperLine.match(/REDEFINES\s+(\w[\w-]*)/i);
+      if (redefinesMatch) {
+        dataItem.redefines = redefinesMatch[1];
+      }
+      
+      return dataItem;
+    }
+    
+    // Try pattern with REDEFINES
+    const redefinesMatch = upperLine.match(
+      /^(\d{1,2})\s+(\w[\w-]*)\s+REDEFINES\s+(\w[\w-]*)\s*(?:PIC(?:TURE)?\s+(\S+))?\.?\s*$/i
+    );
+    
+    if (redefinesMatch) {
+      const dataItem: DataItem = {
+        level: parseInt(redefinesMatch[1]!, 10),
+        name: redefinesMatch[2]!,
+        redefines: redefinesMatch[3],
+      };
+      if (redefinesMatch[4]) {
+        dataItem.pic = redefinesMatch[4];
+      }
+      return dataItem;
+    }
+    
+    // Try pattern with OCCURS and INDEXED BY
+    const occursIndexedMatch = upperLine.match(
+      /^(\d{1,2})\s+(\w[\w-]*)\s+(?:PIC(?:TURE)?\s+(\S+)\s+)?OCCURS\s+(\d+)(?:\s+TIMES)?(?:\s+INDEXED\s+BY\s+(\w[\w-]*))?(?:\s+ASCENDING\s+KEY\s+(?:IS\s+)?(\w[\w-]*))?\.?\s*$/i
+    );
+    
+    if (occursIndexedMatch) {
+      const dataItem: DataItem = {
+        level: parseInt(occursIndexedMatch[1]!, 10),
+        name: occursIndexedMatch[2]!,
+        occurs: parseInt(occursIndexedMatch[4]!, 10),
+      };
+      if (occursIndexedMatch[3]) {
+        dataItem.pic = occursIndexedMatch[3];
+      }
+      if (occursIndexedMatch[5]) {
+        dataItem.indexed = [occursIndexedMatch[5]];
+      }
+      if (occursIndexedMatch[6]) {
+        dataItem.key = occursIndexedMatch[6];
+      }
       return dataItem;
     }
     

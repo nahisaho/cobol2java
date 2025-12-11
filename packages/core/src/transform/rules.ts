@@ -180,6 +180,45 @@ export interface StatementRule {
  * COBOL statement to Java statement mappings
  */
 export const STATEMENT_RULES: StatementRule[] = [
+  // UNSTRING statement (string split) - must be before MOVE to prevent INTO matching
+  {
+    pattern: /UNSTRING\s+(\w[\w-]*)\s+DELIMITED\s+(?:BY\s+)?"([^"]+)"\s+INTO\s+(.+?)(?:\s+ON\s+OVERFLOW|\s*\.?\s*$)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const delimiter = match[2]!;
+      const targetsRaw = match[3]!.replace(/\.$/, '');
+      const targets = targetsRaw.split(/\s+/).filter(t => t && !t.match(/^(WITH|POINTER|COUNT|TALLYING)$/i));
+      const targetVars = targets.map(t => toJavaName(t)).join(', ');
+      return `String[] _parts = ${source}.split("${delimiter}"); // Assign to: ${targetVars}`;
+    },
+    description: 'Unstring with literal delimiter',
+  },
+  {
+    pattern: /UNSTRING\s+(\w[\w-]*)\s+DELIMITED\s+(?:BY\s+)?(\w[\w-]*)\s+INTO\s+(.+?)(?:\s+ON\s+OVERFLOW|\s*\.?\s*$)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const delimiter = toJavaName(match[2]!);
+      const targetsRaw = match[3]!.replace(/\.$/, '');
+      const targets = targetsRaw.split(/\s+/).filter(t => t && !t.match(/^(WITH|POINTER|COUNT|TALLYING)$/i));
+      const targetVars = targets.map(t => toJavaName(t)).join(', ');
+      return `String[] _parts = ${source}.split(${delimiter}); // Assign to: ${targetVars}`;
+    },
+    description: 'Unstring with variable delimiter',
+  },
+  // STRING statement (concatenation) - must be before MOVE to prevent INTO matching
+  {
+    pattern: /STRING\s+(.+?)\s+DELIMITED\s+(?:BY\s+)?(?:SIZE|SPACE|"[^"]*")\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const parts = match[1]!.split(/\s+/).filter(p => p && !p.match(/^DELIMITED$/i));
+      const target = toJavaName(match[2]!);
+      const javaExprs = parts.map(p => {
+        if (p.startsWith('"') && p.endsWith('"')) return p;
+        return toJavaName(p);
+      });
+      return `${target} = ${javaExprs.join(' + ')};`;
+    },
+    description: 'String concatenation',
+  },
   // DISPLAY statement - order matters: more specific patterns first
   {
     pattern: /DISPLAY\s+"([^"]+)"\s+(\w[\w-]*)/gi,
@@ -374,20 +413,6 @@ export const STATEMENT_RULES: StatementRule[] = [
     transform: () => '}',
     description: 'End evaluate',
   },
-  // STRING concatenation
-  {
-    pattern: /STRING\s+(.+?)\s+DELIMITED\s+(?:BY\s+)?(?:SIZE|SPACE|"[^"]*")\s+INTO\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const parts = match[1]!.split(/\s+/).filter(p => p && !p.match(/^DELIMITED$/i));
-      const target = toJavaName(match[2]!);
-      const javaExprs = parts.map(p => {
-        if (p.startsWith('"') && p.endsWith('"')) return p;
-        return toJavaName(p);
-      });
-      return `${target} = ${javaExprs.join(' + ')};`;
-    },
-    description: 'String concatenation',
-  },
   // INITIALIZE statement
   {
     pattern: /INITIALIZE\s+(\w[\w-]*)/gi,
@@ -462,6 +487,207 @@ export const STATEMENT_RULES: StatementRule[] = [
       return `${target} = ${target}.replace("${match[2]}", "${match[3]}");`;
     },
     description: 'Inspect replacing all',
+  },
+  // SEARCH statement (linear search)
+  {
+    pattern: /SEARCH\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const table = toJavaName(match[1]!);
+      return `// SEARCH ${table}: Linear search through table`;
+    },
+    description: 'Search table (linear)',
+  },
+  // SEARCH ALL statement (binary search)
+  {
+    pattern: /SEARCH\s+ALL\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const table = toJavaName(match[1]!);
+      return `// SEARCH ALL ${table}: Binary search (requires sorted table)`;
+    },
+    description: 'Search all (binary search)',
+  },
+  // AT END clause for SEARCH
+  {
+    pattern: /AT\s+END/gi,
+    transform: () => '// AT END: No match found',
+    description: 'At end clause',
+  },
+  // WHEN clause for SEARCH
+  {
+    pattern: /WHEN\s+(\w[\w-]*)\s*(?:\((\w[\w-]*)\))?\s*=\s*(\w[\w-]*|\d+|"[^"]+")/gi,
+    transform: (match) => {
+      const field = match[2] ? `${toJavaName(match[1]!)}[${toJavaName(match[2]!)}]` : toJavaName(match[1]!);
+      const value = match[3]!.startsWith('"') ? match[3] : (/^\d+$/.test(match[3]!) ? match[3] : toJavaName(match[3]!));
+      return `if (${field} == ${value}) {`;
+    },
+    description: 'When condition in search',
+  },
+  // END-SEARCH
+  {
+    pattern: /END-SEARCH/gi,
+    transform: () => '}',
+    description: 'End search block',
+  },
+  // CALL statement (subprogram call)
+  {
+    pattern: /CALL\s+"([^"]+)"\s+USING\s+(.+?)(?:\s+ON\s+|$)/gi,
+    transform: (match) => {
+      const program = match[1]!.toLowerCase().replace(/-/g, '');
+      const params = match[2]!.split(/\s+/).filter(p => p && !p.match(/^(BY|REFERENCE|VALUE|CONTENT)$/i));
+      const javaParams = params.map(p => toJavaName(p)).join(', ');
+      return `${program}.execute(${javaParams});`;
+    },
+    description: 'Call subprogram with parameters',
+  },
+  {
+    pattern: /CALL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const program = match[1]!.toLowerCase().replace(/-/g, '');
+      return `${program}.execute();`;
+    },
+    description: 'Call subprogram without parameters',
+  },
+  {
+    pattern: /CALL\s+(\w[\w-]*)\s+USING\s+(.+?)(?:\s+ON\s+|$)/gi,
+    transform: (match) => {
+      const program = toJavaName(match[1]!);
+      const params = match[2]!.split(/\s+/).filter(p => p && !p.match(/^(BY|REFERENCE|VALUE|CONTENT)$/i));
+      const javaParams = params.map(p => toJavaName(p)).join(', ');
+      return `${program}.execute(${javaParams});`;
+    },
+    description: 'Call variable subprogram with parameters',
+  },
+  {
+    pattern: /CALL\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const program = toJavaName(match[1]!);
+      return `${program}.execute();`;
+    },
+    description: 'Call variable subprogram',
+  },
+  // ON EXCEPTION / NOT ON EXCEPTION for CALL
+  {
+    pattern: /ON\s+EXCEPTION/gi,
+    transform: () => 'catch (Exception e) {',
+    description: 'On exception handler',
+  },
+  {
+    pattern: /NOT\s+ON\s+EXCEPTION/gi,
+    transform: () => '// NOT ON EXCEPTION: Success path',
+    description: 'Not on exception (success)',
+  },
+  // END-CALL
+  {
+    pattern: /END-CALL/gi,
+    transform: () => '}',
+    description: 'End call block',
+  },
+  // OPEN statement (file I/O)
+  {
+    pattern: /OPEN\s+INPUT\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Reader = new BufferedReader(new FileReader(${file}Path));`;
+    },
+    description: 'Open file for input',
+  },
+  {
+    pattern: /OPEN\s+OUTPUT\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Writer = new BufferedWriter(new FileWriter(${file}Path));`;
+    },
+    description: 'Open file for output',
+  },
+  {
+    pattern: /OPEN\s+I-O\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Stream = new RandomAccessFile(${file}Path, "rw");`;
+    },
+    description: 'Open file for input/output',
+  },
+  // CLOSE statement (file I/O)
+  {
+    pattern: /CLOSE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Reader.close(); // or ${file}Writer.close()`;
+    },
+    description: 'Close file',
+  },
+  // READ statement (file I/O)
+  {
+    pattern: /READ\s+(\w[\w-]*)\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const record = toJavaName(match[2]!);
+      return `${record} = ${file}Reader.readLine();`;
+    },
+    description: 'Read file into variable',
+  },
+  {
+    pattern: /READ\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Record = ${file}Reader.readLine();`;
+    },
+    description: 'Read file',
+  },
+  // END-READ
+  {
+    pattern: /END-READ/gi,
+    transform: () => '}',
+    description: 'End read block',
+  },
+  // WRITE statement (file I/O)
+  {
+    pattern: /WRITE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const record = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `${record}Writer.write(${source}); ${record}Writer.newLine();`;
+    },
+    description: 'Write to file from variable',
+  },
+  {
+    pattern: /WRITE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const record = toJavaName(match[1]!);
+      return `${record}Writer.write(${record}); ${record}Writer.newLine();`;
+    },
+    description: 'Write record to file',
+  },
+  // END-WRITE
+  {
+    pattern: /END-WRITE/gi,
+    transform: () => '}',
+    description: 'End write block',
+  },
+  // REWRITE statement (file I/O)
+  {
+    pattern: /REWRITE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const record = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `// REWRITE: Update record in place\n${record}Stream.seek(currentPosition); ${record}Stream.writeBytes(${source});`;
+    },
+    description: 'Rewrite record from variable',
+  },
+  // AT END clause for READ
+  {
+    pattern: /AT\s+END\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// AT END\nif (line == null) { ${statement} }`;
+    },
+    description: 'At end of file',
+  },
+  // NOT AT END clause for READ
+  {
+    pattern: /NOT\s+AT\s+END/gi,
+    transform: () => '// NOT AT END: Record was read successfully',
+    description: 'Not at end (record read)',
   },
 ];
 

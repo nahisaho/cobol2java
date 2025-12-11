@@ -158,5 +158,49 @@ describe('CobolParser', () => {
       expect(mainPara?.statements).toContain('SUBTRACT 2 FROM WS-B');
       expect(mainPara?.statements).toContain('DISPLAY WS-A');
     });
+
+    it('should parse REDEFINES clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. REDEFINES-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-DATE PIC 9(8).
+        01 WS-DATE-R REDEFINES WS-DATE.
+           05 WS-YEAR PIC 9(4).
+           05 WS-MONTH PIC 9(2).
+           05 WS-DAY PIC 9(2).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const redefinesItem = ast.dataItems.find(d => d.name === 'WS-DATE-R');
+      expect(redefinesItem).toBeDefined();
+      expect(redefinesItem?.redefines).toBe('WS-DATE');
+    });
+
+    it('should parse OCCURS with INDEXED BY', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. OCCURS-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-TABLE.
+           05 WS-ENTRY OCCURS 10 INDEXED BY WS-IDX.
+              10 WS-NAME PIC X(20).
+              10 WS-VALUE PIC 9(5).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const occursItem = ast.dataItems.find(d => d.name === 'WS-ENTRY');
+      expect(occursItem).toBeDefined();
+      expect(occursItem?.occurs).toBe(10);
+      expect(occursItem?.indexed).toContain('WS-IDX');
+    });
   });
 });
