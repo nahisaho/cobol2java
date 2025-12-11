@@ -235,6 +235,80 @@ export interface StatementRule {
  * COBOL statement to Java statement mappings
  */
 export const STATEMENT_RULES: StatementRule[] = [
+  // Error/exception handling clauses - must be at top to match before DISPLAY
+  // NOT patterns must come before non-NOT patterns
+  // NOT INVALID KEY clause
+  {
+    pattern: /NOT\s+INVALID\s+KEY\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// NOT INVALID KEY - file operation succeeded\n${statement}`;
+    },
+    description: 'Not invalid key (success) handler',
+  },
+  // INVALID KEY clause (for indexed/relative file operations)
+  {
+    pattern: /INVALID\s+KEY\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// INVALID KEY - file operation failed\ncatch (KeyNotFoundException e) { ${statement} }`;
+    },
+    description: 'Invalid key handler',
+  },
+  // NOT ON SIZE ERROR
+  {
+    pattern: /NOT\s+ON\s+SIZE\s+ERROR\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// NOT ON SIZE ERROR - arithmetic succeeded\n${statement}`;
+    },
+    description: 'Not on size error handler',
+  },
+  // ON SIZE ERROR (arithmetic overflow)
+  {
+    pattern: /ON\s+SIZE\s+ERROR\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// ON SIZE ERROR\ncatch (ArithmeticException e) { ${statement} }`;
+    },
+    description: 'Size error handler',
+  },
+  // NOT ON OVERFLOW
+  {
+    pattern: /NOT\s+ON\s+OVERFLOW\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// NOT ON OVERFLOW - string operation succeeded\n${statement}`;
+    },
+    description: 'Not on overflow handler',
+  },
+  // ON OVERFLOW (STRING/UNSTRING)
+  {
+    pattern: /ON\s+OVERFLOW\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// ON OVERFLOW\ncatch (StringIndexOutOfBoundsException e) { ${statement} }`;
+    },
+    description: 'Overflow handler',
+  },
+  // NOT ON EXCEPTION
+  {
+    pattern: /NOT\s+ON\s+EXCEPTION\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// NOT ON EXCEPTION - call succeeded\n${statement}`;
+    },
+    description: 'Not on exception handler',
+  },
+  // ON EXCEPTION (CALL)
+  {
+    pattern: /ON\s+EXCEPTION\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// ON EXCEPTION\ncatch (Exception e) { ${statement} }`;
+    },
+    description: 'Exception handler',
+  },
   // UNSTRING statement (string split) - must be before MOVE to prevent INTO matching
   {
     pattern: /UNSTRING\s+(\w[\w-]*)\s+DELIMITED\s+(?:BY\s+)?"([^"]+)"\s+INTO\s+(.+?)(?:\s+ON\s+OVERFLOW|\s*\.?\s*$)/gi,
@@ -1195,6 +1269,41 @@ export const INTRINSIC_FUNCTIONS: Record<string, (args: string[]) => string> = {
   'ANNUITY': (args) => `${args[0]} / (1 - Math.pow(1 + ${args[0]}, -${args[1]}))`,
   'TEST-NUMVAL': (args) => `isNumeric(${args[0]}) ? 0 : 1`,
   'TEST-NUMVAL-C': (args) => `isNumericCurrency(${args[0]}) ? 0 : 1`,
+  // Additional commonly used functions
+  'INSPECT': (args) => args[0]!, // Placeholder - complex statement
+  'STRING': (args) => args.join(' + '), // String concatenation
+  'UNSTRING': (args) => `${args[0]}.split("${args[1] || ","}")`, // String split
+  'YEAR-TO-YYYY': (args) => {
+    if (args.length >= 3) {
+      return `convertYear(${args[0]}, ${args[1]}, ${args[2]})`;
+    }
+    return `(${args[0]} < 50 ? 2000 + ${args[0]} : 1900 + ${args[0]})`;
+  },
+  'DATE-TO-YYYYMMDD': (args) => `convertDateToYYYYMMDD(${args.join(', ')})`,
+  'DAY-TO-YYYYDDD': (args) => `convertDayToYYYYDDD(${args.join(', ')})`,
+  'SECONDS-FROM-FORMATTED-TIME': (args) => `java.time.LocalTime.parse(${args[1]}).toSecondOfDay()`,
+  'SECONDS-PAST-MIDNIGHT': () => `java.time.LocalTime.now().toSecondOfDay()`,
+  'FACTORIAL': (args) => `factorial(${args[0]})`,
+  'E': () => `Math.E`,
+  'PI': () => `Math.PI`,
+  'SIGN': (args) => `(int) Math.signum(${args[0]})`,
+  'FORMATTED-DATE': (args) => `formatDate(${args.join(', ')})`,
+  'FORMATTED-TIME': (args) => `formatTime(${args.join(', ')})`,
+  'FORMATTED-DATETIME': (args) => `formatDateTime(${args.join(', ')})`,
+  'TEST-DATE-YYYYMMDD': (args) => `isValidDate(${args[0]}) ? 0 : 1`,
+  'TEST-DAY-YYYYDDD': (args) => `isValidDayOfYear(${args[0]}) ? 0 : 1`,
+  'LOCALE-DATE': (args) => `java.time.LocalDate.parse(${args[0]}).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM))`,
+  'LOCALE-TIME': (args) => `java.time.LocalTime.parse(${args[0]}).format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.MEDIUM))`,
+  'BOOLEAN-OF-INTEGER': (args) => `${args[0]} != 0`,
+  'INTEGER-OF-BOOLEAN': (args) => `${args[0]} ? 1 : 0`,
+  'HEX-OF': (args) => `Integer.toHexString(${args[0]})`,
+  'HEX-TO-CHAR': (args) => `String.valueOf((char) Integer.parseInt(${args[0]}, 16))`,
+  'ULENGTH': (args) => `${args[0]}.codePointCount(0, ${args[0]}.length())`, // Unicode length
+  'UPOS': (args) => `${args[0]}.offsetByCodePoints(0, ${args[1]})`, // Unicode position
+  'USUBSTR': (args) => `${args[0]}.substring(${args[0]}.offsetByCodePoints(0, ${args[1]} - 1), ${args[0]}.offsetByCodePoints(0, ${args[1]} - 1 + ${args[2]}))`,
+  'UVALID': (args) => `java.text.Normalizer.isNormalized(${args[0]}, java.text.Normalizer.Form.NFC) ? 0 : 1`,
+  'USUPPLEMENTARY': (args) => `${args[0]}.codePointAt(${args[1]} - 1) > 0xFFFF ? 1 : 0`,
+  'COMBINED-DATETIME': (args) => `java.time.LocalDateTime.of(java.time.LocalDate.parse(String.valueOf(${args[0]}), java.time.format.DateTimeFormatter.BASIC_ISO_DATE), java.time.LocalTime.ofSecondOfDay((long) ${args[1]}))`,
 };
 
 /**

@@ -2,7 +2,7 @@
  * Transformation rules tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   mapDataType,
   toJavaName,
@@ -10,6 +10,8 @@ import {
   transformStatement,
   transformExpression,
   transformCondition,
+  setLevel88Context,
+  transform88LevelCondition,
 } from '../src/transform/index.js';
 
 describe('mapDataType', () => {
@@ -433,5 +435,145 @@ describe('COMP-4/COMP-5', () => {
 
   it('maps COMP-5 to int', () => {
     expect(mapDataType('COMP-5')).toBe('int');
+  });
+});
+
+describe('88-level condition evaluation', () => {
+  beforeEach(() => {
+    // Set up 88-level context with test data
+    setLevel88Context([
+      { level: 1, name: 'WS-STATUS' },
+      { level: 88, name: 'STATUS-ACTIVE', values: ['A'] },
+      { level: 88, name: 'STATUS-INACTIVE', values: ['I'] },
+      { level: 88, name: 'STATUS-VALID', values: ['A', 'I', 'P'] },
+      { level: 1, name: 'WS-CODE' },
+      { level: 88, name: 'CODE-RANGE', values: ['1...5'] },
+      { level: 1, name: 'WS-COUNT' },
+      { level: 88, name: 'COUNT-ZERO', values: ['0'] },
+      { level: 88, name: 'COUNT-RANGE', values: ['1...10'] },
+    ]);
+  });
+
+  it('transforms single value 88-level condition', () => {
+    const result = transform88LevelCondition('STATUS-ACTIVE');
+    expect(result).toContain('wsStatus');
+    expect(result).toContain('.equals("A")');
+  });
+
+  it('transforms multiple value 88-level condition', () => {
+    const result = transform88LevelCondition('STATUS-VALID');
+    expect(result).toContain('||');
+    expect(result).toContain('.equals("A")');
+    expect(result).toContain('.equals("I")');
+    expect(result).toContain('.equals("P")');
+  });
+
+  it('transforms numeric range 88-level condition', () => {
+    const result = transform88LevelCondition('COUNT-RANGE');
+    expect(result).toContain('>=');
+    expect(result).toContain('<=');
+    expect(result).toContain('1');
+    expect(result).toContain('10');
+  });
+
+  it('transforms 88-level condition in IF statement', () => {
+    const result = transformCondition('STATUS-ACTIVE');
+    expect(result).toContain('wsStatus');
+    expect(result).toContain('.equals("A")');
+  });
+
+  it('returns null for unknown condition name', () => {
+    const result = transform88LevelCondition('UNKNOWN-CONDITION');
+    expect(result).toBeNull();
+  });
+});
+
+describe('Exception and error handling clauses', () => {
+  it('transforms INVALID KEY clause', () => {
+    const result = transformStatement('INVALID KEY DISPLAY "KEY ERROR"');
+    expect(result).toContain('INVALID KEY');
+    expect(result).toContain('KeyNotFoundException');
+  });
+
+  it('transforms NOT INVALID KEY clause', () => {
+    const result = transformStatement('NOT INVALID KEY DISPLAY "SUCCESS"');
+    expect(result).toContain('NOT INVALID KEY');
+  });
+
+  it('transforms ON SIZE ERROR clause', () => {
+    const result = transformStatement('ON SIZE ERROR DISPLAY "OVERFLOW"');
+    expect(result).toContain('SIZE ERROR');
+    expect(result).toContain('ArithmeticException');
+  });
+
+  it('transforms ON OVERFLOW clause', () => {
+    const result = transformStatement('ON OVERFLOW DISPLAY "TOO LONG"');
+    expect(result).toContain('OVERFLOW');
+    expect(result).toContain('StringIndexOutOfBoundsException');
+  });
+
+  it('transforms ON EXCEPTION clause', () => {
+    const result = transformStatement('ON EXCEPTION DISPLAY "CALL FAILED"');
+    expect(result).toContain('EXCEPTION');
+    expect(result).toContain('catch');
+  });
+});
+
+describe('Additional intrinsic functions', () => {
+  it('transforms FUNCTION REVERSE', () => {
+    expect(transformExpression('FUNCTION REVERSE(WS-TEXT)')).toContain('StringBuilder');
+    expect(transformExpression('FUNCTION REVERSE(WS-TEXT)')).toContain('reverse');
+  });
+
+  it('transforms FUNCTION ABS', () => {
+    expect(transformExpression('FUNCTION ABS(WS-NUM)')).toContain('Math.abs');
+  });
+
+  it('transforms FUNCTION MAX', () => {
+    expect(transformExpression('FUNCTION MAX(A, B)')).toContain('Math.max');
+  });
+
+  it('transforms FUNCTION MIN', () => {
+    expect(transformExpression('FUNCTION MIN(A, B)')).toContain('Math.min');
+  });
+
+  it('transforms FUNCTION SQRT', () => {
+    expect(transformExpression('FUNCTION SQRT(WS-NUM)')).toContain('Math.sqrt');
+  });
+
+  it('transforms FUNCTION MOD', () => {
+    expect(transformExpression('FUNCTION MOD(A, B)')).toContain('%');
+  });
+
+  it('transforms FUNCTION MEAN', () => {
+    expect(transformExpression('FUNCTION MEAN(A, B, C)')).toContain('/');
+  });
+
+  it('transforms FUNCTION RANDOM', () => {
+    expect(transformExpression('FUNCTION RANDOM')).toContain('random');
+  });
+
+  it('transforms FUNCTION CONCATENATE', () => {
+    expect(transformExpression('FUNCTION CONCATENATE(A, B)')).toContain('+');
+  });
+
+  it('transforms FUNCTION SIN', () => {
+    expect(transformExpression('FUNCTION SIN(X)')).toContain('Math.sin');
+  });
+
+  it('transforms FUNCTION COS', () => {
+    expect(transformExpression('FUNCTION COS(X)')).toContain('Math.cos');
+  });
+
+  it('transforms FUNCTION LOG', () => {
+    expect(transformExpression('FUNCTION LOG(X)')).toContain('Math.log');
+  });
+
+  it('transforms FUNCTION E', () => {
+    expect(transformExpression('FUNCTION E')).toContain('Math.E');
+  });
+
+  it('transforms FUNCTION PI', () => {
+    expect(transformExpression('FUNCTION PI')).toContain('Math.PI');
   });
 });

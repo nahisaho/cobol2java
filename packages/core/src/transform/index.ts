@@ -12,6 +12,8 @@ export {
   transformExpression,
   transformCondition,
   parseIfStatement,
+  setLevel88Context,
+  transform88LevelCondition,
   type DataTypeMapping,
   type StatementRule,
   type IfBlock,

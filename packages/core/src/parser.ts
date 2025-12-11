@@ -41,6 +41,24 @@ export interface DataItem {
 }
 
 /**
+ * File definition from ENVIRONMENT and DATA divisions
+ */
+export interface FileDefinition {
+  selectName: string;           // SELECT file-name
+  assignTo: string;             // ASSIGN TO target
+  organization?: 'SEQUENTIAL' | 'INDEXED' | 'RELATIVE' | 'LINE SEQUENTIAL';
+  accessMode?: 'SEQUENTIAL' | 'RANDOM' | 'DYNAMIC';
+  recordKey?: string;           // RECORD KEY for indexed files
+  alternateKeys?: string[];     // ALTERNATE RECORD KEY
+  fileStatus?: string;          // FILE STATUS variable
+  fdName?: string;              // FD name
+  recordName?: string;          // Record layout name
+  recordSize?: number | { min: number; max: number };
+  blockSize?: number;
+  labelRecords?: 'STANDARD' | 'OMITTED';
+}
+
+/**
  * Condition name (88-level) mapping
  */
 export interface ConditionName {
@@ -84,6 +102,7 @@ export interface CobolAst {
   procedureDivision?: CobolNode;
   dataItems: DataItem[];
   paragraphs: Paragraph[];
+  fileDefinitions: FileDefinition[];
   errors: ErrorInfo[];
   raw: string;
 }
@@ -114,12 +133,16 @@ export class CobolParser {
     const lines = source.split('\n');
     const dataItems: DataItem[] = [];
     const paragraphs: Paragraph[] = [];
+    const fileDefinitions: FileDefinition[] = [];
     
     let programName: string | undefined;
     let hasIdentification = false;
     let hasProcedure = false;
     let currentSection: 'identification' | 'environment' | 'data' | 'procedure' | null = null;
+    let currentSubSection: 'file-control' | 'working-storage' | 'file' | null = null;
     let currentParagraph: Paragraph | null = null;
+    let currentFileDefinition: Partial<FileDefinition> | null = null;
+    let selectBuffer = '';  // Buffer for multi-line SELECT statements
 
     for (let i = 0; i < lines.length; i++) {
       const rawLine = lines[i] ?? '';
@@ -140,15 +163,30 @@ export class CobolParser {
       }
       if (upperLine.includes('ENVIRONMENT DIVISION')) {
         currentSection = 'environment';
+        currentSubSection = null;
+        continue;
+      }
+      if (upperLine.includes('FILE-CONTROL')) {
+        currentSubSection = 'file-control';
         continue;
       }
       if (upperLine.includes('DATA DIVISION')) {
         currentSection = 'data';
+        currentSubSection = null;
+        continue;
+      }
+      if (upperLine.includes('FILE SECTION')) {
+        currentSubSection = 'file';
+        continue;
+      }
+      if (upperLine.includes('WORKING-STORAGE SECTION')) {
+        currentSubSection = 'working-storage';
         continue;
       }
       if (upperLine.includes('PROCEDURE DIVISION')) {
         hasProcedure = true;
         currentSection = 'procedure';
+        currentSubSection = null;
         continue;
       }
 
@@ -160,7 +198,31 @@ export class CobolParser {
         }
       }
 
+      // Parse ENVIRONMENT DIVISION - FILE-CONTROL
+      if (currentSection === 'environment' && currentSubSection === 'file-control') {
+        // Buffer SELECT statements (can span multiple lines)
+        if (upperLine.includes('SELECT') && !selectBuffer) {
+          selectBuffer = line;
+        } else if (selectBuffer) {
+          selectBuffer += ' ' + line;
+        }
+        
+        // Parse complete SELECT statement (ends with period)
+        if (selectBuffer && selectBuffer.trim().endsWith('.')) {
+          const fileDef = this.parseSelectStatement(selectBuffer);
+          if (fileDef) {
+            fileDefinitions.push(fileDef as FileDefinition);
+          }
+          selectBuffer = '';
+        }
+      }
+
       if (currentSection === 'data') {
+        // Parse FD statements in FILE SECTION
+        if (currentSubSection === 'file' && upperLine.match(/^\s*FD\s+/)) {
+          this.parseFdStatement(line, fileDefinitions);
+        }
+        
         const dataItem = this.parseDataItem(line);
         if (dataItem) {
           dataItems.push(dataItem);
@@ -241,9 +303,124 @@ export class CobolParser {
       programName,
       dataItems,
       paragraphs,
+      fileDefinitions,
       errors,
       raw: source,
     };
+  }
+
+  /**
+   * Parse SELECT...ASSIGN statement
+   * Example: SELECT CUSTOMER-FILE ASSIGN TO "CUSTFILE"
+   *          ORGANIZATION IS INDEXED
+   *          ACCESS MODE IS DYNAMIC
+   *          RECORD KEY IS CUST-ID
+   *          FILE STATUS IS WS-FILE-STATUS.
+   */
+  private parseSelectStatement(statement: string): Partial<FileDefinition> | null {
+    const upperStatement = statement.toUpperCase();
+    
+    // Extract SELECT file-name
+    const selectMatch = upperStatement.match(/SELECT\s+(\w[\w-]*)/);
+    if (!selectMatch) return null;
+    
+    const fileDef: Partial<FileDefinition> = {
+      selectName: selectMatch[1]!,
+    };
+    
+    // ASSIGN TO
+    const assignMatch = statement.match(/ASSIGN\s+(?:TO\s+)?["']?(\w[\w.-]*)["']?/i);
+    if (assignMatch) {
+      fileDef.assignTo = assignMatch[1]!;
+    }
+    
+    // ORGANIZATION
+    const orgMatch = upperStatement.match(/ORGANIZATION\s+(?:IS\s+)?(SEQUENTIAL|INDEXED|RELATIVE|LINE\s+SEQUENTIAL)/);
+    if (orgMatch) {
+      fileDef.organization = orgMatch[1]!.replace(/\s+/g, ' ') as FileDefinition['organization'];
+    }
+    
+    // ACCESS MODE
+    const accessMatch = upperStatement.match(/ACCESS\s+(?:MODE\s+)?(?:IS\s+)?(SEQUENTIAL|RANDOM|DYNAMIC)/);
+    if (accessMatch) {
+      fileDef.accessMode = accessMatch[1] as FileDefinition['accessMode'];
+    }
+    
+    // RECORD KEY
+    const keyMatch = upperStatement.match(/RECORD\s+KEY\s+(?:IS\s+)?(\w[\w-]*)/);
+    if (keyMatch) {
+      fileDef.recordKey = keyMatch[1];
+    }
+    
+    // ALTERNATE RECORD KEY(s)
+    const altKeyPattern = /ALTERNATE\s+RECORD\s+KEY\s+(?:IS\s+)?(\w[\w-]*)/gi;
+    const altKeys: string[] = [];
+    let altMatch;
+    while ((altMatch = altKeyPattern.exec(upperStatement)) !== null) {
+      altKeys.push(altMatch[1]!);
+    }
+    if (altKeys.length > 0) {
+      fileDef.alternateKeys = altKeys;
+    }
+    
+    // FILE STATUS
+    const statusMatch = upperStatement.match(/FILE\s+STATUS\s+(?:IS\s+)?(\w[\w-]*)/);
+    if (statusMatch) {
+      fileDef.fileStatus = statusMatch[1];
+    }
+    
+    return fileDef;
+  }
+
+  /**
+   * Parse FD (File Description) statement
+   * Example: FD CUSTOMER-FILE
+   *          BLOCK CONTAINS 0 RECORDS
+   *          RECORD CONTAINS 100 CHARACTERS
+   *          LABEL RECORDS ARE STANDARD.
+   */
+  private parseFdStatement(line: string, fileDefinitions: FileDefinition[]): void {
+    const upperLine = line.toUpperCase();
+    
+    // Extract FD file-name
+    const fdMatch = upperLine.match(/FD\s+(\w[\w-]*)/);
+    if (!fdMatch) return;
+    
+    const fdName = fdMatch[1]!;
+    
+    // Find matching SELECT statement and update
+    const existingDef = fileDefinitions.find(
+      fd => fd.selectName?.toUpperCase() === fdName.toUpperCase()
+    );
+    
+    if (existingDef) {
+      existingDef.fdName = fdName;
+      
+      // BLOCK CONTAINS
+      const blockMatch = upperLine.match(/BLOCK\s+CONTAINS\s+(\d+)/);
+      if (blockMatch) {
+        existingDef.blockSize = parseInt(blockMatch[1]!, 10);
+      }
+      
+      // RECORD CONTAINS (fixed or variable)
+      const recordMatch = upperLine.match(/RECORD\s+CONTAINS\s+(?:(\d+)\s+TO\s+)?(\d+)/);
+      if (recordMatch) {
+        if (recordMatch[1]) {
+          existingDef.recordSize = {
+            min: parseInt(recordMatch[1], 10),
+            max: parseInt(recordMatch[2]!, 10),
+          };
+        } else {
+          existingDef.recordSize = parseInt(recordMatch[2]!, 10);
+        }
+      }
+      
+      // LABEL RECORDS
+      const labelMatch = upperLine.match(/LABEL\s+RECORDS?\s+(?:ARE?\s+)?(STANDARD|OMITTED)/);
+      if (labelMatch) {
+        existingDef.labelRecords = labelMatch[1] as 'STANDARD' | 'OMITTED';
+      }
+    }
   }
 
   /**

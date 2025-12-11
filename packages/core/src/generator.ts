@@ -4,7 +4,7 @@
  * Generates Java source code from COBOL AST
  */
 
-import { type CobolAst, type DataItem, type Paragraph } from './parser.js';
+import { type CobolAst, type DataItem, type Paragraph, type FileDefinition } from './parser.js';
 import { type LLMClient } from './llm/index.js';
 import { type ErrorInfo } from './errors.js';
 import { mapDataType, toJavaName, toClassName, transformStatement } from './transform/index.js';
@@ -101,6 +101,14 @@ export class JavaGenerator {
     lines.push(`public class ${className} {`);
     lines.push('');
 
+    // Generate file handler fields from FILE-CONTROL
+    const fileFields = this.generateFileFields(ast.fileDefinitions || []);
+    if (fileFields.length > 0) {
+      lines.push('    // File handlers (from ENVIRONMENT DIVISION FILE-CONTROL)');
+      lines.push(...fileFields);
+      lines.push('');
+    }
+
     // Generate fields from DATA DIVISION
     const fields = this.generateFields(ast.dataItems);
     if (fields.length > 0) {
@@ -179,7 +187,51 @@ export class JavaGenerator {
       imports.push('import java.math.BigDecimal;');
     }
 
+    // Check if file I/O is needed
+    const hasFileDefinitions = (ast.fileDefinitions?.length ?? 0) > 0;
+    if (hasFileDefinitions) {
+      imports.push('import java.io.*;');
+      imports.push('import java.nio.file.*;');
+    }
+
     return imports;
+  }
+
+  /**
+   * Generate file handler fields from file definitions
+   */
+  private generateFileFields(fileDefinitions: FileDefinition[]): string[] {
+    const lines: string[] = [];
+
+    for (const fileDef of fileDefinitions) {
+      const javaName = toJavaName(fileDef.selectName);
+      const pathVar = `${javaName}Path`;
+      const readerVar = `${javaName}Reader`;
+      const writerVar = `${javaName}Writer`;
+      const statusVar = fileDef.fileStatus ? toJavaName(fileDef.fileStatus) : `${javaName}Status`;
+
+      // File path
+      lines.push(`    // File: ${fileDef.selectName} (${fileDef.organization || 'SEQUENTIAL'})`);
+      if (fileDef.assignTo) {
+        lines.push(`    private String ${pathVar} = "${fileDef.assignTo}";`);
+      } else {
+        lines.push(`    private String ${pathVar};`);
+      }
+
+      // Reader/Writer based on organization
+      if (fileDef.organization === 'INDEXED') {
+        // Indexed files need a Map-based approach
+        const keyType = fileDef.recordKey ? 'String' : 'String';
+        lines.push(`    private java.util.Map<${keyType}, String> ${javaName}Data = new java.util.LinkedHashMap<>();`);
+      }
+      
+      lines.push(`    private BufferedReader ${readerVar};`);
+      lines.push(`    private BufferedWriter ${writerVar};`);
+      lines.push(`    private String ${statusVar} = "00";  // File status`);
+      lines.push('');
+    }
+
+    return lines;
   }
 
   /**

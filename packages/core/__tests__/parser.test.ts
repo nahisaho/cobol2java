@@ -202,5 +202,65 @@ describe('CobolParser', () => {
       expect(occursItem?.occurs).toBe(10);
       expect(occursItem?.indexed).toContain('WS-IDX');
     });
+
+    it('should parse SELECT...ASSIGN statement', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. FILE-TEST.
+        ENVIRONMENT DIVISION.
+        INPUT-OUTPUT SECTION.
+        FILE-CONTROL.
+            SELECT CUSTOMER-FILE ASSIGN TO "CUSTFILE.DAT"
+                   ORGANIZATION IS INDEXED
+                   ACCESS MODE IS DYNAMIC
+                   RECORD KEY IS CUST-ID
+                   FILE STATUS IS WS-FILE-STATUS.
+        DATA DIVISION.
+        FILE SECTION.
+        FD CUSTOMER-FILE
+           BLOCK CONTAINS 0 RECORDS
+           RECORD CONTAINS 100 CHARACTERS
+           LABEL RECORDS ARE STANDARD.
+        WORKING-STORAGE SECTION.
+        01 WS-FILE-STATUS PIC XX.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.fileDefinitions).toBeDefined();
+      expect(ast.fileDefinitions.length).toBe(1);
+      
+      const fileDef = ast.fileDefinitions[0]!;
+      expect(fileDef.selectName).toBe('CUSTOMER-FILE');
+      expect(fileDef.assignTo).toBe('CUSTFILE.DAT');
+      expect(fileDef.organization).toBe('INDEXED');
+      expect(fileDef.accessMode).toBe('DYNAMIC');
+      expect(fileDef.recordKey).toBe('CUST-ID');
+      expect(fileDef.fileStatus).toBe('WS-FILE-STATUS');
+    });
+
+    it('should parse simple SELECT...ASSIGN for sequential file', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SEQ-FILE-TEST.
+        ENVIRONMENT DIVISION.
+        INPUT-OUTPUT SECTION.
+        FILE-CONTROL.
+            SELECT INPUT-FILE ASSIGN TO "INPUT.TXT".
+        DATA DIVISION.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.fileDefinitions.length).toBe(1);
+      
+      const fileDef = ast.fileDefinitions[0]!;
+      expect(fileDef.selectName).toBe('INPUT-FILE');
+      expect(fileDef.assignTo).toBe('INPUT.TXT');
+    });
   });
 });
