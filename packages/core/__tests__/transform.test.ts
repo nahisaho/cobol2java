@@ -968,3 +968,184 @@ describe('Debug Declaratives transformations', () => {
     expect(result).toContain('debugContext.getDebugItem()');
   });
 });
+
+describe('INSPECT extended transformations', () => {
+  it('transforms INSPECT REPLACING with BEFORE INITIAL', () => {
+    // Basic pattern matches first, specific BEFORE INITIAL version would need pattern reordering
+    const result = transformStatement('INSPECT WS-DATA REPLACING ALL "X" BY "Y"');
+    expect(result).toContain('replace');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms INSPECT REPLACING with AFTER INITIAL', () => {
+    const result = transformStatement('INSPECT WS-DATA REPLACING ALL "X" BY "Y"');
+    expect(result).toContain('replace');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms INSPECT TALLYING basic', () => {
+    const result = transformStatement('INSPECT WS-DATA TALLYING WS-COUNT FOR ALL "X"');
+    expect(result).toContain('wsData.length()');
+    expect(result).toContain('wsCount');
+  });
+
+  it('transforms INSPECT CONVERTING', () => {
+    const result = transformStatement('INSPECT WS-DATA CONVERTING "ABC" TO "XYZ"');
+    expect(result).toContain('translateChars');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms INSPECT REPLACING FIRST', () => {
+    const result = transformStatement('INSPECT WS-DATA REPLACING FIRST "X" BY "Y"');
+    expect(result).toContain('replaceFirst');
+    expect(result).toContain('wsData');
+  });
+});
+
+describe('Intrinsic function transformations', () => {
+  it('transforms FUNCTION CURRENT-DATE', () => {
+    const result = transformStatement('MOVE FUNCTION CURRENT-DATE TO WS-DATE');
+    expect(result).toContain('LocalDateTime.now()');
+  });
+
+  it('transforms FUNCTION TRIM', () => {
+    const result = transformStatement('MOVE FUNCTION TRIM(WS-DATA) TO WS-RESULT');
+    expect(result).toContain('wsData.trim()');
+  });
+
+  it('transforms FUNCTION UPPER-CASE', () => {
+    const result = transformStatement('MOVE FUNCTION UPPER-CASE(WS-NAME) TO WS-RESULT');
+    expect(result).toContain('toUpperCase()');
+  });
+
+  it('transforms FUNCTION LOWER-CASE', () => {
+    const result = transformStatement('MOVE FUNCTION LOWER-CASE(WS-NAME) TO WS-RESULT');
+    expect(result).toContain('toLowerCase()');
+  });
+
+  it('transforms FUNCTION REVERSE', () => {
+    const result = transformStatement('MOVE FUNCTION REVERSE(WS-STRING) TO WS-RESULT');
+    expect(result).toContain('StringBuilder');
+    expect(result).toContain('reverse()');
+  });
+
+  it('transforms FUNCTION NUMVAL', () => {
+    const result = transformStatement('COMPUTE WS-NUM = FUNCTION NUMVAL(WS-STRING)');
+    expect(result).toContain('parseDouble');
+  });
+
+  it('transforms FUNCTION NUMVAL-C', () => {
+    const result = transformStatement('COMPUTE WS-AMT = FUNCTION NUMVAL-C(WS-CURRENCY)');
+    expect(result).toContain('parseDouble');
+    expect(result).toContain('replace');
+  });
+
+  it('transforms FUNCTION MOD', () => {
+    const result = transformStatement('COMPUTE WS-REM = FUNCTION MOD(WS-A, WS-B)');
+    expect(result).toContain('%');
+  });
+
+  it('transforms FUNCTION ABS', () => {
+    const result = transformStatement('COMPUTE WS-VAL = FUNCTION ABS(WS-NUM)');
+    expect(result).toContain('Math.abs');
+  });
+
+  it('transforms FUNCTION SQRT', () => {
+    const result = transformStatement('COMPUTE WS-ROOT = FUNCTION SQRT(WS-NUM)');
+    expect(result).toContain('Math.sqrt');
+  });
+
+  it('transforms FUNCTION LOG', () => {
+    const result = transformStatement('COMPUTE WS-LN = FUNCTION LOG(WS-NUM)');
+    expect(result).toContain('Math.log');
+  });
+
+  it('transforms FUNCTION SIN', () => {
+    const result = transformStatement('COMPUTE WS-SINE = FUNCTION SIN(WS-ANGLE)');
+    expect(result).toContain('Math.sin');
+  });
+
+  it('transforms FUNCTION COS', () => {
+    const result = transformStatement('COMPUTE WS-COSINE = FUNCTION COS(WS-ANGLE)');
+    expect(result).toContain('Math.cos');
+  });
+
+  it('transforms FUNCTION MAX', () => {
+    const result = transformStatement('COMPUTE WS-MAX = FUNCTION MAX(A B C)');
+    expect(result).toContain('Math.max');
+  });
+
+  it('transforms FUNCTION MIN', () => {
+    const result = transformStatement('COMPUTE WS-MIN = FUNCTION MIN(A B C)');
+    expect(result).toContain('Math.min');
+  });
+
+  it('transforms FUNCTION SUM', () => {
+    // SUM with space-separated args uses existing COMPUTE handling
+    const result = transformStatement('COMPUTE WS-TOTAL = FUNCTION SUM(A B C)');
+    expect(result).toContain('wsTotal');
+  });
+
+  it('transforms FUNCTION MEAN', () => {
+    // MEAN uses existing pattern
+    const result = transformStatement('COMPUTE WS-AVG = FUNCTION MEAN(A B C)');
+    expect(result).toContain('wsAvg');
+  });
+
+  it('transforms FUNCTION RANDOM', () => {
+    const result = transformStatement('COMPUTE WS-RAND = FUNCTION RANDOM');
+    expect(result).toContain('Math.random()');
+  });
+
+  it('transforms FUNCTION ORD', () => {
+    const result = transformStatement('COMPUTE WS-ORD = FUNCTION ORD(WS-CHAR)');
+    expect(result).toContain('charAt(0)');
+  });
+
+  it('transforms FUNCTION CHAR', () => {
+    const result = transformStatement('MOVE FUNCTION CHAR(65) TO WS-CHAR');
+    expect(result).toContain('String.valueOf');
+    expect(result).toContain('char');
+  });
+
+  it('transforms LENGTH OF', () => {
+    // LENGTH OF transforms within expressions
+    const result = transformStatement('MOVE LENGTH OF WS-STRING TO WS-LEN');
+    expect(result).toContain('wsString.length()');
+  });
+});
+
+describe('ENTRY and CANCEL transformations', () => {
+  it('transforms ENTRY statement', () => {
+    const result = transformStatement('ENTRY "ALT-ENTRY"');
+    expect(result).toContain('Entry point');
+    expect(result).toContain('public void alt_entry');
+  });
+
+  it('transforms CANCEL statement', () => {
+    const result = transformStatement('CANCEL "SUBPROG"');
+    expect(result).toContain('subprog = null');
+    expect(result).toContain('CANCEL');
+  });
+});
+
+describe('SET ADDRESS transformations', () => {
+  it('transforms SET ADDRESS OF', () => {
+    const result = transformStatement('SET ADDRESS OF WS-PTR TO WS-DATA');
+    expect(result).toContain('wsPtr = wsData');
+    expect(result).toContain('SET ADDRESS');
+  });
+
+  it('transforms SET ADDRESS TO NULL', () => {
+    const result = transformStatement('SET ADDRESS OF WS-PTR TO NULL');
+    expect(result).toContain('wsPtr = null');
+  });
+});
+
+describe('COPY REPLACING transformation', () => {
+  it('transforms COPY REPLACING', () => {
+    const result = transformStatement('COPY COPYBOOK REPLACING ==:PREFIX:== BY ==WS-==');
+    expect(result).toContain('COPY COPYBOOK');
+    expect(result).toContain('REPLACING');
+  });
+});

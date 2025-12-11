@@ -1163,10 +1163,341 @@ private void debug${toClassName(match[1]!)}() {
       const target = toJavaName(match[1]!);
       const from = match[2]!;
       const to = match[3]!;
-      // Character-by-character translation (like tr command)
-      return `${target} = translateChars(${target}, "${from}", "${to}"); // TODO: implement translateChars`;
+      return `${target} = translateChars(${target}, "${from}", "${to}"); // Character translation`;
     },
     description: 'Inspect converting characters',
+  },
+  // INSPECT REPLACING with BEFORE INITIAL
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+ALL\s+"([^"]+)"\s+BY\s+"([^"]+)"\s+BEFORE\s+INITIAL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = replaceBeforeInitial(${target}, "${match[2]}", "${match[3]}", "${match[4]}");`;
+    },
+    description: 'Inspect replacing before initial delimiter',
+  },
+  // INSPECT REPLACING with AFTER INITIAL
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+ALL\s+"([^"]+)"\s+BY\s+"([^"]+)"\s+AFTER\s+INITIAL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = replaceAfterInitial(${target}, "${match[2]}", "${match[3]}", "${match[4]}");`;
+    },
+    description: 'Inspect replacing after initial delimiter',
+  },
+  // INSPECT TALLYING with BEFORE INITIAL
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+ALL\s+"([^"]+)"\s+BEFORE\s+INITIAL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      return `${counter} = countBeforeInitial(${target}, "${match[3]}", "${match[4]}");`;
+    },
+    description: 'Inspect tallying before initial delimiter',
+  },
+  // INSPECT TALLYING with AFTER INITIAL
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+ALL\s+"([^"]+)"\s+AFTER\s+INITIAL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      return `${counter} = countAfterInitial(${target}, "${match[3]}", "${match[4]}");`;
+    },
+    description: 'Inspect tallying after initial delimiter',
+  },
+  // INSPECT TALLYING AND REPLACING (combined)
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+ALL\s+"([^"]+)"\s+REPLACING\s+ALL\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      return `${counter} = countOccurrences(${target}, "${match[3]}"); ${target} = ${target}.replace("${match[4]}", "${match[5]}");`;
+    },
+    description: 'Inspect tallying and replacing combined',
+  },
+  // COPY REPLACING (preprocessor replacement)
+  {
+    pattern: /COPY\s+(\w[\w-]*)\s+REPLACING\s+==:([^:]+):==\s+BY\s+==([^=]+)==/gi,
+    transform: (match) => {
+      const copybook = match[1];
+      const placeholder = match[2];
+      const replacement = match[3];
+      return `// COPY ${copybook} REPLACING ==:${placeholder}:== BY ==${replacement}==`;
+    },
+    description: 'Copy with replacement',
+  },
+  // ENTRY statement (alternative entry point)
+  {
+    pattern: /ENTRY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const entryName = match[1]!.toLowerCase().replace(/-/g, '_');
+      return `// Entry point: ${entryName}\npublic void ${entryName}() {`;
+    },
+    description: 'Alternative entry point',
+  },
+  // CANCEL statement (unload subprogram)
+  {
+    pattern: /CANCEL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const program = match[1]!.toLowerCase().replace(/-/g, '');
+      return `${program} = null; // CANCEL - unload subprogram`;
+    },
+    description: 'Cancel subprogram',
+  },
+  // SET ADDRESS OF (pointer assignment)
+  {
+    pattern: /SET\s+ADDRESS\s+OF\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `${target} = ${source}; // SET ADDRESS - pointer assignment`;
+    },
+    description: 'Set address pointer',
+  },
+  // SET pointer TO NULL
+  {
+    pattern: /SET\s+ADDRESS\s+OF\s+(\w[\w-]*)\s+TO\s+NULL/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = null;`;
+    },
+    description: 'Set address to null',
+  },
+  // LENGTH OF (intrinsic function)
+  {
+    pattern: /LENGTH\s+OF\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target}.length()`;
+    },
+    description: 'Length of function',
+  },
+  // FUNCTION CURRENT-DATE
+  {
+    pattern: /FUNCTION\s+CURRENT-DATE/gi,
+    transform: () => 'java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSSSSS"))',
+    description: 'Current date function',
+  },
+  // FUNCTION WHEN-COMPILED
+  {
+    pattern: /FUNCTION\s+WHEN-COMPILED/gi,
+    transform: () => 'WHEN_COMPILED // Compile timestamp constant',
+    description: 'When compiled function',
+  },
+  // FUNCTION TRIM
+  {
+    pattern: /FUNCTION\s+TRIM\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target}.trim()`;
+    },
+    description: 'Trim function',
+  },
+  // FUNCTION UPPER-CASE
+  {
+    pattern: /FUNCTION\s+UPPER-CASE\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target}.toUpperCase()`;
+    },
+    description: 'Upper case function',
+  },
+  // FUNCTION LOWER-CASE
+  {
+    pattern: /FUNCTION\s+LOWER-CASE\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target}.toLowerCase()`;
+    },
+    description: 'Lower case function',
+  },
+  // FUNCTION REVERSE
+  {
+    pattern: /FUNCTION\s+REVERSE\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `new StringBuilder(${target}).reverse().toString()`;
+    },
+    description: 'Reverse function',
+  },
+  // FUNCTION NUMVAL (numeric value)
+  {
+    pattern: /FUNCTION\s+NUMVAL\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Double.parseDouble(${target}.trim())`;
+    },
+    description: 'Numval function',
+  },
+  // FUNCTION NUMVAL-C (numeric value with currency)
+  {
+    pattern: /FUNCTION\s+NUMVAL-C\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Double.parseDouble(${target}.replaceAll("[^0-9.-]", ""))`;
+    },
+    description: 'Numval-C function',
+  },
+  // FUNCTION INTEGER (truncate to integer)
+  {
+    pattern: /FUNCTION\s+INTEGER\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `(int) ${target}`;
+    },
+    description: 'Integer function',
+  },
+  // FUNCTION MOD (modulo)
+  {
+    pattern: /FUNCTION\s+MOD\s*\(\s*(\w[\w-]*)\s*,\s*(\w[\w-]*|\d+)\s*\)/gi,
+    transform: (match) => {
+      const a = toJavaName(match[1]!);
+      const b = /^\d+$/.test(match[2]!) ? match[2] : toJavaName(match[2]!);
+      return `(${a} % ${b})`;
+    },
+    description: 'Mod function',
+  },
+  // FUNCTION REM (remainder)
+  {
+    pattern: /FUNCTION\s+REM\s*\(\s*(\w[\w-]*)\s*,\s*(\w[\w-]*|\d+)\s*\)/gi,
+    transform: (match) => {
+      const a = toJavaName(match[1]!);
+      const b = /^\d+$/.test(match[2]!) ? match[2] : toJavaName(match[2]!);
+      return `Math.IEEEremainder(${a}, ${b})`;
+    },
+    description: 'Remainder function',
+  },
+  // FUNCTION ABS (absolute value)
+  {
+    pattern: /FUNCTION\s+ABS\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Math.abs(${target})`;
+    },
+    description: 'Absolute value function',
+  },
+  // FUNCTION SQRT (square root)
+  {
+    pattern: /FUNCTION\s+SQRT\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Math.sqrt(${target})`;
+    },
+    description: 'Square root function',
+  },
+  // FUNCTION LOG (natural logarithm)
+  {
+    pattern: /FUNCTION\s+LOG\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Math.log(${target})`;
+    },
+    description: 'Natural log function',
+  },
+  // FUNCTION LOG10 (base-10 logarithm)
+  {
+    pattern: /FUNCTION\s+LOG10\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Math.log10(${target})`;
+    },
+    description: 'Log base 10 function',
+  },
+  // FUNCTION EXP (e^x)
+  {
+    pattern: /FUNCTION\s+EXP\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `Math.exp(${target})`;
+    },
+    description: 'Exponential function',
+  },
+  // FUNCTION SIN/COS/TAN
+  {
+    pattern: /FUNCTION\s+(SIN|COS|TAN)\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const func = match[1]!.toLowerCase();
+      const target = toJavaName(match[2]!);
+      return `Math.${func}(${target})`;
+    },
+    description: 'Trigonometric functions',
+  },
+  // FUNCTION ASIN/ACOS/ATAN
+  {
+    pattern: /FUNCTION\s+(ASIN|ACOS|ATAN)\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const func = match[1]!.toLowerCase();
+      const target = toJavaName(match[2]!);
+      return `Math.${func}(${target})`;
+    },
+    description: 'Inverse trigonometric functions',
+  },
+  // FUNCTION MAX (maximum)
+  {
+    pattern: /FUNCTION\s+MAX\s*\(\s*([^)]+)\s*\)/gi,
+    transform: (match) => {
+      const args = match[1]!.split(/\s+/).map(a => /^\d+$/.test(a) ? a : toJavaName(a)).join(', ');
+      return `Collections.max(Arrays.asList(${args}))`;
+    },
+    description: 'Maximum function',
+  },
+  // FUNCTION MIN (minimum)
+  {
+    pattern: /FUNCTION\s+MIN\s*\(\s*([^)]+)\s*\)/gi,
+    transform: (match) => {
+      const args = match[1]!.split(/\s+/).map(a => /^\d+$/.test(a) ? a : toJavaName(a)).join(', ');
+      return `Collections.min(Arrays.asList(${args}))`;
+    },
+    description: 'Minimum function',
+  },
+  // FUNCTION SUM (summation)
+  {
+    pattern: /FUNCTION\s+SUM\s*\(\s*([^)]+)\s*\)/gi,
+    transform: (match) => {
+      const args = match[1]!.split(/\s+/).map(a => /^\d+$/.test(a) ? a : toJavaName(a)).join(' + ');
+      return `(${args})`;
+    },
+    description: 'Sum function',
+  },
+  // FUNCTION MEAN (average)
+  {
+    pattern: /FUNCTION\s+MEAN\s*\(\s*([^)]+)\s*\)/gi,
+    transform: (match) => {
+      const items = match[1]!.split(/\s+/).filter(a => a);
+      const args = items.map(a => /^\d+$/.test(a) ? a : toJavaName(a)).join(' + ');
+      return `((${args}) / ${items.length})`;
+    },
+    description: 'Mean function',
+  },
+  // FUNCTION ORD (ordinal value)
+  {
+    pattern: /FUNCTION\s+ORD\s*\(\s*(\w[\w-]*)\s*\)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `(int) ${target}.charAt(0)`;
+    },
+    description: 'Ordinal function',
+  },
+  // FUNCTION CHAR (character from ordinal)
+  {
+    pattern: /FUNCTION\s+CHAR\s*\(\s*(\w[\w-]*|\d+)\s*\)/gi,
+    transform: (match) => {
+      const val = /^\d+$/.test(match[1]!) ? match[1] : toJavaName(match[1]!);
+      return `String.valueOf((char) ${val})`;
+    },
+    description: 'Char function',
+  },
+  // FUNCTION RANDOM (random number)
+  {
+    pattern: /FUNCTION\s+RANDOM(?:\s*\(\s*(\w[\w-]*)?\s*\))?/gi,
+    transform: (match) => {
+      if (match[1]) {
+        const seed = toJavaName(match[1]!);
+        return `new java.util.Random(${seed}).nextDouble()`;
+      }
+      return 'Math.random()';
+    },
+    description: 'Random function',
   },
   // ADD CORRESPONDING / CORR (must be before simpler ADD patterns)
   {
