@@ -1149,3 +1149,82 @@ describe('COPY REPLACING transformation', () => {
     expect(result).toContain('REPLACING');
   });
 });
+
+describe('Object-Oriented COBOL transformations', () => {
+  it('transforms CLASS-ID', () => {
+    const result = transformStatement('CLASS-ID. CUSTOMER-ACCOUNT');
+    expect(result).toContain('public class CustomerAccount');
+  });
+
+  it('transforms CLASS-ID with INHERITS', () => {
+    const result = transformStatement('CLASS-ID. SAVINGS-ACCOUNT INHERITS FROM ACCOUNT');
+    expect(result).toContain('public class SavingsAccount extends Account');
+  });
+
+  it('transforms METHOD-ID', () => {
+    const result = transformStatement('METHOD-ID. CALCULATE-INTEREST');
+    expect(result).toContain('public void calculateInterest()');
+  });
+
+  it('transforms END METHOD', () => {
+    const result = transformStatement('END METHOD CALCULATE-INTEREST');
+    expect(result).toContain('} // END METHOD');
+  });
+
+  it('transforms END CLASS', () => {
+    const result = transformStatement('END CLASS CUSTOMER-ACCOUNT');
+    expect(result).toContain('} // END CLASS');
+  });
+
+  it('transforms INTERFACE-ID', () => {
+    const result = transformStatement('INTERFACE-ID. PRINTABLE');
+    expect(result).toContain('public interface Printable');
+  });
+
+  it('transforms INVOKE NEW', () => {
+    const result = transformStatement('INVOKE CUSTOMER "NEW" RETURNING WS-OBJ');
+    expect(result).toContain('wsObj = new Customer()');
+  });
+
+  it('transforms INVOKE SELF', () => {
+    const result = transformStatement('INVOKE SELF "GET-BALANCE" RETURNING WS-BAL');
+    expect(result).toContain('wsBal = this.getbalance()');
+  });
+
+  it('transforms INVOKE SUPER', () => {
+    const result = transformStatement('INVOKE SUPER "INITIALIZE"');
+    expect(result).toContain('super.initialize()');
+  });
+
+  it('transforms INVOKE with method call', () => {
+    const result = transformStatement('INVOKE WS-ACCOUNT "DEPOSIT" USING WS-AMOUNT');
+    expect(result).toContain('wsAccount.deposit(wsAmount)');
+  });
+
+  it('transforms FACTORY paragraph', () => {
+    const result = transformStatement('FACTORY.');
+    expect(result).toContain('FACTORY SECTION');
+    expect(result).toContain('static');
+  });
+
+  it('transforms OBJECT paragraph', () => {
+    const result = transformStatement('OBJECT.');
+    expect(result).toContain('OBJECT SECTION');
+    expect(result).toContain('instance');
+  });
+
+  it('transforms GET property', () => {
+    const result = transformStatement('GET BALANCE OF WS-ACCOUNT');
+    expect(result).toContain('wsAccount.getBalance()');
+  });
+
+  it('transforms SET property', () => {
+    const result = transformStatement('SET BALANCE OF WS-ACCOUNT TO 1000');
+    expect(result).toContain('wsAccount.setBalance(1000)');
+  });
+
+  it('transforms IMPLEMENTS', () => {
+    const result = transformStatement('IMPLEMENTS PRINTABLE');
+    expect(result).toContain('implements Printable');
+  });
+});

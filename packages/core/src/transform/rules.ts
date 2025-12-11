@@ -2100,13 +2100,165 @@ ${outputProc}(); // OUTPUT PROCEDURE - retrieves from merge buffer via RETURN`;
     },
     description: 'Terminate report',
   },
-  // INVOKE statement (OO COBOL)
+  
+  // ==== Object-Oriented COBOL statements ====
+  // CLASS-ID paragraph
   {
-    pattern: /INVOKE\s+(\w[\w-]*)\s+"([^"]+)"(?:\s+USING\s+(.+?))?(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
+    pattern: /CLASS-ID\.\s+(\w[\w-]*)(?:\s+INHERITS\s+(?:FROM\s+)?(\w[\w-]*))?/gi,
+    transform: (match) => {
+      const className = toClassName(match[1]!);
+      const parent = match[2] ? toClassName(match[2]!) : 'Object';
+      return `public class ${className} extends ${parent} {`;
+    },
+    description: 'OO COBOL class definition',
+  },
+  // METHOD-ID paragraph
+  {
+    pattern: /METHOD-ID\.\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const method = toJavaName(match[1]!);
+      return `public void ${method}() {`;
+    },
+    description: 'OO COBOL method definition',
+  },
+  // END METHOD
+  {
+    pattern: /END\s+METHOD\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      return `} // END METHOD ${match[1]}`;
+    },
+    description: 'OO COBOL end method',
+  },
+  // END CLASS
+  {
+    pattern: /END\s+CLASS\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      return `} // END CLASS ${match[1]}`;
+    },
+    description: 'OO COBOL end class',
+  },
+  // FACTORY paragraph
+  {
+    pattern: /FACTORY\./gi,
+    transform: () => '// FACTORY SECTION - static members',
+    description: 'OO COBOL factory section',
+  },
+  // OBJECT paragraph
+  {
+    pattern: /OBJECT\./gi,
+    transform: () => '// OBJECT SECTION - instance members',
+    description: 'OO COBOL object section',
+  },
+  // END FACTORY
+  {
+    pattern: /END\s+FACTORY/gi,
+    transform: () => '// END FACTORY',
+    description: 'OO COBOL end factory',
+  },
+  // END OBJECT
+  {
+    pattern: /END\s+OBJECT/gi,
+    transform: () => '// END OBJECT',
+    description: 'OO COBOL end object',
+  },
+  // INTERFACE-ID
+  {
+    pattern: /INTERFACE-ID\.\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const intfName = toClassName(match[1]!);
+      return `public interface ${intfName} {`;
+    },
+    description: 'OO COBOL interface definition',
+  },
+  // END INTERFACE
+  {
+    pattern: /END\s+INTERFACE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      return `} // END INTERFACE ${match[1]}`;
+    },
+    description: 'OO COBOL end interface',
+  },
+  // IMPLEMENTS clause
+  {
+    pattern: /IMPLEMENTS\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const intfName = toClassName(match[1]!);
+      return `implements ${intfName}`;
+    },
+    description: 'OO COBOL implements interface',
+  },
+  // INVOKE NEW (object instantiation)
+  {
+    pattern: /INVOKE\s+(\w[\w-]*)\s+"NEW"(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
+    transform: (match) => {
+      const className = toClassName(match[1]!);
+      const retVar = match[2] ? toJavaName(match[2]!) : 'obj';
+      return `${retVar} = new ${className}();`;
+    },
+    description: 'OO COBOL object instantiation',
+  },
+  // INVOKE SELF (call method on self)
+  {
+    pattern: /INVOKE\s+SELF\s+"([^"]+)"(?:\s+USING\s+(.+?))?(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
+    transform: (match) => {
+      const method = match[1]!.toLowerCase().replace(/-/g, '');
+      const params = match[2] ? match[2].split(/\s+/).map(p => toJavaName(p)).join(', ') : '';
+      const ret = match[3] ? `${toJavaName(match[3])} = ` : '';
+      return `${ret}this.${method}(${params});`;
+    },
+    description: 'OO COBOL invoke self method',
+  },
+  // INVOKE SUPER (call parent method)
+  {
+    pattern: /INVOKE\s+SUPER\s+"([^"]+)"(?:\s+USING\s+(.+?))?(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
+    transform: (match) => {
+      const method = match[1]!.toLowerCase().replace(/-/g, '');
+      const params = match[2] ? match[2].split(/\s+/).map(p => toJavaName(p)).join(', ') : '';
+      const ret = match[3] ? `${toJavaName(match[3])} = ` : '';
+      return `${ret}super.${method}(${params});`;
+    },
+    description: 'OO COBOL invoke super method',
+  },
+  // GET property
+  {
+    pattern: /GET\s+(\w[\w-]*)\s+OF\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const prop = toJavaName(match[1]!);
+      const obj = toJavaName(match[2]!);
+      const getter = 'get' + prop.charAt(0).toUpperCase() + prop.slice(1);
+      return `${obj}.${getter}()`;
+    },
+    description: 'OO COBOL property getter',
+  },
+  // SET property
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+OF\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*|\d+|"[^"]+")/gi,
+    transform: (match) => {
+      const prop = toJavaName(match[1]!);
+      const obj = toJavaName(match[2]!);
+      const value = match[3]!.startsWith('"') ? match[3] : (/^\d+$/.test(match[3]!) ? match[3] : toJavaName(match[3]!));
+      const setter = 'set' + prop.charAt(0).toUpperCase() + prop.slice(1);
+      return `${obj}.${setter}(${value});`;
+    },
+    description: 'OO COBOL property setter',
+  },
+  // REPOSITORY paragraph (class references)
+  {
+    pattern: /REPOSITORY\.\s*(?:CLASS\s+(\w[\w-]*)(?:\s+AS\s+"([^"]+)")?)/gi,
+    transform: (match) => {
+      const className = toClassName(match[1]!);
+      const alias = match[2] ? match[2] : match[1];
+      return `// REPOSITORY: import ${className} // ${alias}`;
+    },
+    description: 'OO COBOL repository class',
+  },
+  // INVOKE statement (OO COBOL) - general form
+  {
+    pattern: /INVOKE\s+(\w[\w-]*)\s+"([^"]+)"(?:\s+USING\s+(\w[\w-]*))?(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
     transform: (match) => {
       const obj = toJavaName(match[1]!);
       const method = match[2]!.toLowerCase().replace(/-/g, '');
-      const params = match[3] ? match[3].split(/\s+/).map(p => toJavaName(p)).join(', ') : '';
+      const params = match[3] ? toJavaName(match[3]!) : '';
       const ret = match[4] ? `${toJavaName(match[4])} = ` : '';
       return `${ret}${obj}.${method}(${params});`;
     },
