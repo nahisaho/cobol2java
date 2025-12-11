@@ -2936,6 +2936,44 @@ export function transform88LevelCondition(conditionName: string): string | null 
 export function transformCondition(cobolCondition: string): string {
   let cond = cobolCondition.trim();
   
+  // Check for compound 88-level conditions with AND/OR
+  // e.g., "IS-VALID AND IS-ACTIVE" or "IS-MALE OR IS-FEMALE"
+  const andParts = cond.split(/\s+AND\s+/i);
+  if (andParts.length > 1) {
+    const transformed = andParts.map(part => transformCondition(part.trim()));
+    // If all parts transformed to 88-level conditions, combine them
+    if (transformed.every(t => !t.includes(' '))) {
+      const all88 = andParts.every(part => {
+        const match = part.trim().match(/^(?:NOT\s+)?([A-Z][\w-]*)$/i);
+        if (match) {
+          return transform88LevelCondition(match[1]!) !== null;
+        }
+        return false;
+      });
+      if (all88) {
+        return transformed.join(' && ');
+      }
+    }
+  }
+  
+  const orParts = cond.split(/\s+OR\s+/i);
+  if (orParts.length > 1) {
+    const transformed = orParts.map(part => transformCondition(part.trim()));
+    // If all parts transformed to 88-level conditions, combine them
+    if (transformed.every(t => !t.includes(' ') || t.startsWith('('))) {
+      const all88 = orParts.every(part => {
+        const match = part.trim().match(/^(?:NOT\s+)?([A-Z][\w-]*)$/i);
+        if (match) {
+          return transform88LevelCondition(match[1]!) !== null;
+        }
+        return false;
+      });
+      if (all88) {
+        return `(${transformed.join(' || ')})`;
+      }
+    }
+  }
+  
   // Check for 88-level condition name (single identifier that might be a condition)
   const singleIdMatch = cond.match(/^([A-Z][\w-]*)$/i);
   if (singleIdMatch) {

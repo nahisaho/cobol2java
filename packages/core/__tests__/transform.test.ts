@@ -486,6 +486,42 @@ describe('88-level condition evaluation', () => {
     const result = transform88LevelCondition('UNKNOWN-CONDITION');
     expect(result).toBeNull();
   });
+
+  it('transforms compound AND condition with 88-levels', () => {
+    // Add IS-MALE and IS-ACTIVE conditions
+    setLevel88Context([
+      { level: 1, name: 'WS-GENDER' },
+      { level: 88, name: 'IS-MALE', values: ['M'] },
+      { level: 88, name: 'IS-FEMALE', values: ['F'] },
+      { level: 1, name: 'WS-STATUS' },
+      { level: 88, name: 'IS-ACTIVE', values: ['A'] },
+    ]);
+    const result = transformCondition('IS-MALE AND IS-ACTIVE');
+    expect(result).toContain('&&');
+    expect(result).toContain('wsGender');
+    expect(result).toContain('wsStatus');
+  });
+
+  it('transforms compound OR condition with 88-levels', () => {
+    setLevel88Context([
+      { level: 1, name: 'WS-GENDER' },
+      { level: 88, name: 'IS-MALE', values: ['M'] },
+      { level: 88, name: 'IS-FEMALE', values: ['F'] },
+    ]);
+    const result = transformCondition('IS-MALE OR IS-FEMALE');
+    expect(result).toContain('||');
+    expect(result).toContain('wsGender');
+  });
+
+  it('transforms NOT 88-level condition', () => {
+    setLevel88Context([
+      { level: 1, name: 'WS-STATUS' },
+      { level: 88, name: 'IS-ACTIVE', values: ['A'] },
+    ]);
+    const result = transformCondition('NOT IS-ACTIVE');
+    expect(result).toContain('!');
+    expect(result).toContain('wsStatus');
+  });
 });
 
 describe('Exception and error handling clauses', () => {
