@@ -262,5 +262,91 @@ describe('CobolParser', () => {
       expect(fileDef.selectName).toBe('INPUT-FILE');
       expect(fileDef.assignTo).toBe('INPUT.TXT');
     });
+
+    it('should parse IDENTIFICATION DIVISION extended paragraphs', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. IDENT-TEST.
+        AUTHOR. John Smith.
+        INSTALLATION. Main Office.
+        DATE-WRITTEN. 2025-12-12.
+        DATE-COMPILED. 2025-12-12.
+        SECURITY. Confidential.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.identificationInfo).toBeDefined();
+      expect(ast.identificationInfo?.programId).toBe('IDENT-TEST');
+      expect(ast.identificationInfo?.author).toBe('John Smith');
+      expect(ast.identificationInfo?.installation).toBe('Main Office');
+      expect(ast.identificationInfo?.dateWritten).toBe('2025-12-12');
+      expect(ast.identificationInfo?.dateCompiled).toBe('2025-12-12');
+      expect(ast.identificationInfo?.security).toBe('Confidential');
+    });
+
+    it('should parse SPECIAL-NAMES paragraph', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SPECIAL-TEST.
+        ENVIRONMENT DIVISION.
+        CONFIGURATION SECTION.
+        SPECIAL-NAMES.
+            DECIMAL-POINT IS COMMA
+            CURRENCY SIGN IS "EUR".
+        DATA DIVISION.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.specialNames).toBeDefined();
+      expect(ast.specialNames?.decimalPointIsComma).toBe(true);
+      expect(ast.specialNames?.currencySign).toBe('EUR');
+    });
+
+    it('should parse COPY statement', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. COPY-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+            COPY CUSTOMER-COPY.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.copyStatements).toBeDefined();
+      expect(ast.copyStatements.length).toBeGreaterThanOrEqual(1);
+      const copyStmt = ast.copyStatements.find(c => c.copybook === 'CUSTOMER-COPY');
+      expect(copyStmt).toBeDefined();
+    });
+
+    it('should parse COPY with REPLACING', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. COPY-REPLACE-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+            COPY MASTER-COPY REPLACING ==:PREFIX:== BY ==WS-==.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      expect(ast.copyStatements.length).toBeGreaterThanOrEqual(1);
+      const copyStmt = ast.copyStatements.find(c => c.copybook === 'MASTER-COPY');
+      expect(copyStmt).toBeDefined();
+      expect(copyStmt?.replacing).toBeDefined();
+      expect(copyStmt?.replacing?.length).toBeGreaterThanOrEqual(1);
+      expect(copyStmt?.replacing?.[0]?.from).toBe(':PREFIX:');
+      expect(copyStmt?.replacing?.[0]?.to).toBe('WS-');
+    });
   });
 });

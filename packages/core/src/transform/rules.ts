@@ -644,6 +644,38 @@ export const STATEMENT_RULES: StatementRule[] = [
     },
     description: 'Inspect tallying all occurrences',
   },
+  // INSPECT TALLYING FOR CHARACTERS
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+CHARACTERS/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      return `${counter} = ${source}.length();`;
+    },
+    description: 'Inspect tallying characters (total length)',
+  },
+  // INSPECT TALLYING FOR LEADING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+LEADING\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      const searchStr = match[3];
+      return `${counter} = ${source}.length() - ${source}.replaceFirst("^${searchStr}+", "").length();`;
+    },
+    description: 'Inspect tallying leading occurrences',
+  },
+  // INSPECT TALLYING FOR TRAILING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+TRAILING\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      const searchStr = match[3];
+      return `${counter} = ${source}.length() - ${source}.replaceFirst("${searchStr}+$", "").length();`;
+    },
+    description: 'Inspect tallying trailing occurrences',
+  },
   // INSPECT REPLACING
   {
     pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+ALL\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
@@ -652,6 +684,75 @@ export const STATEMENT_RULES: StatementRule[] = [
       return `${target} = ${target}.replace("${match[2]}", "${match[3]}");`;
     },
     description: 'Inspect replacing all',
+  },
+  // INSPECT REPLACING FIRST
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+FIRST\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = ${target}.replaceFirst("${match[2]}", "${match[3]}");`;
+    },
+    description: 'Inspect replacing first occurrence',
+  },
+  // INSPECT REPLACING LEADING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+LEADING\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = ${target}.replaceFirst("^${match[2]}+", "${match[3]}");`;
+    },
+    description: 'Inspect replacing leading',
+  },
+  // INSPECT REPLACING TRAILING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+TRAILING\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = ${target}.replaceFirst("${match[2]}+$", "${match[3]}");`;
+    },
+    description: 'Inspect replacing trailing',
+  },
+  // INSPECT CONVERTING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+CONVERTING\s+"([^"]+)"\s+TO\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const from = match[2]!;
+      const to = match[3]!;
+      // Character-by-character translation (like tr command)
+      return `${target} = translateChars(${target}, "${from}", "${to}"); // TODO: implement translateChars`;
+    },
+    description: 'Inspect converting characters',
+  },
+  // ADD CORRESPONDING / CORR (must be before simpler ADD patterns)
+  {
+    pattern: /ADD\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.addCorresponding(${source}); // ADD CORRESPONDING`;
+    },
+    description: 'Add corresponding fields',
+  },
+  // SUBTRACT CORRESPONDING / CORR
+  {
+    pattern: /SUBTRACT\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.subtractCorresponding(${source}); // SUBTRACT CORRESPONDING`;
+    },
+    description: 'Subtract corresponding fields',
+  },
+  // MOVE CORRESPONDING / CORR (must be before simpler MOVE patterns)
+  {
+    pattern: /MOVE\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.copyCorresponding(${source}); // MOVE CORRESPONDING`;
+    },
+    description: 'Move corresponding fields',
   },
   // SEARCH statement (linear search)
   {
@@ -942,36 +1043,6 @@ export const STATEMENT_RULES: StatementRule[] = [
       return `${target} = sortBuffer.poll(); // RETURN from ${file}`;
     },
     description: 'Return record from sort',
-  },
-  // ADD CORRESPONDING
-  {
-    pattern: /ADD\s+CORRESPONDING\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.addCorresponding(${source}); // ADD CORRESPONDING`;
-    },
-    description: 'Add corresponding fields',
-  },
-  // MOVE CORRESPONDING
-  {
-    pattern: /MOVE\s+CORRESPONDING\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.copyCorresponding(${source}); // MOVE CORRESPONDING`;
-    },
-    description: 'Move corresponding fields',
-  },
-  // SUBTRACT CORRESPONDING
-  {
-    pattern: /SUBTRACT\s+CORRESPONDING\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.subtractCorresponding(${source}); // SUBTRACT CORRESPONDING`;
-    },
-    description: 'Subtract corresponding fields',
   },
   // ROUNDED option
   {

@@ -91,11 +91,52 @@ export interface CobolNode {
 }
 
 /**
+ * IDENTIFICATION DIVISION metadata
+ */
+export interface IdentificationInfo {
+  programId?: string;
+  author?: string;
+  installation?: string;
+  dateWritten?: string;
+  dateCompiled?: string;
+  security?: string;
+  remarks?: string;
+}
+
+/**
+ * SPECIAL-NAMES configuration
+ */
+export interface SpecialNames {
+  decimalPointIsComma?: boolean;
+  currencySign?: string;
+  symbolicCharacters?: Record<string, number>;
+  classNames?: Record<string, string>;
+  conditionNames?: Record<string, string>;
+}
+
+/**
+ * COPY statement with optional REPLACING
+ */
+export interface CopyStatement {
+  copybook: string;
+  library?: string;
+  replacing?: Array<{
+    from: string;
+    to: string;
+    type: 'text' | 'leading' | 'trailing';
+  }>;
+  line: number;
+}
+
+/**
  * COBOL AST root
  */
 export interface CobolAst {
   type: 'program';
   programName?: string;
+  identificationInfo?: IdentificationInfo;
+  specialNames?: SpecialNames;
+  copyStatements: CopyStatement[];
   identificationDivision?: CobolNode;
   environmentDivision?: CobolNode;
   dataDivision?: CobolNode;
@@ -134,15 +175,19 @@ export class CobolParser {
     const dataItems: DataItem[] = [];
     const paragraphs: Paragraph[] = [];
     const fileDefinitions: FileDefinition[] = [];
+    const copyStatements: CopyStatement[] = [];
+    const identificationInfo: IdentificationInfo = {};
+    const specialNames: SpecialNames = {};
     
     let programName: string | undefined;
     let hasIdentification = false;
     let hasProcedure = false;
     let currentSection: 'identification' | 'environment' | 'data' | 'procedure' | null = null;
-    let currentSubSection: 'file-control' | 'working-storage' | 'file' | null = null;
+    let currentSubSection: 'file-control' | 'working-storage' | 'file' | 'special-names' | null = null;
     let currentParagraph: Paragraph | null = null;
     let currentFileDefinition: Partial<FileDefinition> | null = null;
     let selectBuffer = '';  // Buffer for multi-line SELECT statements
+    let copyBuffer = '';    // Buffer for multi-line COPY statements
 
     for (let i = 0; i < lines.length; i++) {
       const rawLine = lines[i] ?? '';
@@ -170,6 +215,10 @@ export class CobolParser {
         currentSubSection = 'file-control';
         continue;
       }
+      if (upperLine.includes('SPECIAL-NAMES')) {
+        currentSubSection = 'special-names';
+        continue;
+      }
       if (upperLine.includes('DATA DIVISION')) {
         currentSection = 'data';
         currentSubSection = null;
@@ -195,7 +244,90 @@ export class CobolParser {
         const programIdMatch = upperLine.match(/PROGRAM-ID\.\s*(\w[\w-]*)/);
         if (programIdMatch) {
           programName = programIdMatch[1];
+          identificationInfo.programId = programIdMatch[1];
         }
+        
+        // Parse IDENTIFICATION DIVISION paragraphs
+        const authorMatch = line.match(/AUTHOR\.\s*(.+?)\.?\s*$/i);
+        if (authorMatch) {
+          identificationInfo.author = authorMatch[1].trim();
+        }
+        
+        const installMatch = line.match(/INSTALLATION\.\s*(.+?)\.?\s*$/i);
+        if (installMatch) {
+          identificationInfo.installation = installMatch[1].trim();
+        }
+        
+        const dateWrittenMatch = line.match(/DATE-WRITTEN\.\s*(.+?)\.?\s*$/i);
+        if (dateWrittenMatch) {
+          identificationInfo.dateWritten = dateWrittenMatch[1].trim();
+        }
+        
+        const dateCompiledMatch = line.match(/DATE-COMPILED\.\s*(.+?)\.?\s*$/i);
+        if (dateCompiledMatch) {
+          identificationInfo.dateCompiled = dateCompiledMatch[1].trim();
+        }
+        
+        const securityMatch = line.match(/SECURITY\.\s*(.+?)\.?\s*$/i);
+        if (securityMatch) {
+          identificationInfo.security = securityMatch[1].trim();
+        }
+        
+        const remarksMatch = line.match(/REMARKS\.\s*(.+?)\.?\s*$/i);
+        if (remarksMatch) {
+          identificationInfo.remarks = remarksMatch[1].trim();
+        }
+      }
+
+      // Parse ENVIRONMENT DIVISION - SPECIAL-NAMES
+      if (currentSection === 'environment' && currentSubSection === 'special-names') {
+        // DECIMAL-POINT IS COMMA
+        if (upperLine.includes('DECIMAL-POINT') && upperLine.includes('COMMA')) {
+          specialNames.decimalPointIsComma = true;
+        }
+        
+        // CURRENCY SIGN IS
+        const currencyMatch = line.match(/CURRENCY\s+SIGN\s+(?:IS\s+)?["']?([^"'\s.]+)["']?/i);
+        if (currencyMatch) {
+          specialNames.currencySign = currencyMatch[1];
+        }
+        
+        // SYMBOLIC CHARACTERS
+        const symbolicMatch = line.match(/SYMBOLIC\s+CHARACTERS?\s+(\w+)\s+(?:IS\s+)?(\d+)/i);
+        if (symbolicMatch) {
+          if (!specialNames.symbolicCharacters) {
+            specialNames.symbolicCharacters = {};
+          }
+          specialNames.symbolicCharacters[symbolicMatch[1]!] = parseInt(symbolicMatch[2]!, 10);
+        }
+        
+        // CLASS definitions
+        const classMatch = line.match(/CLASS\s+(\w[\w-]*)\s+(?:IS\s+)?(.+?)\.?\s*$/i);
+        if (classMatch) {
+          if (!specialNames.classNames) {
+            specialNames.classNames = {};
+          }
+          specialNames.classNames[classMatch[1]!] = classMatch[2]!.trim();
+        }
+      }
+
+      // Parse COPY statements (can appear in any division)
+      if (upperLine.includes('COPY')) {
+        // Buffer COPY statements (can span multiple lines with REPLACING)
+        if (!copyBuffer) {
+          copyBuffer = line;
+        }
+      } else if (copyBuffer) {
+        copyBuffer += ' ' + line;
+      }
+      
+      // Parse complete COPY statement (ends with period)
+      if (copyBuffer && copyBuffer.trim().endsWith('.')) {
+        const copyStmt = this.parseCopyStatement(copyBuffer, i + 1);
+        if (copyStmt) {
+          copyStatements.push(copyStmt);
+        }
+        copyBuffer = '';
       }
 
       // Parse ENVIRONMENT DIVISION - FILE-CONTROL
@@ -301,12 +433,77 @@ export class CobolParser {
     return {
       type: 'program',
       programName,
+      identificationInfo: Object.keys(identificationInfo).length > 0 ? identificationInfo : undefined,
+      specialNames: Object.keys(specialNames).length > 0 ? specialNames : undefined,
+      copyStatements,
       dataItems,
       paragraphs,
       fileDefinitions,
       errors,
       raw: source,
     };
+  }
+
+  /**
+   * Parse COPY statement with optional REPLACING
+   * Examples:
+   *   COPY CUSTCOPY.
+   *   COPY CUSTCOPY IN COPYLIB.
+   *   COPY CUSTCOPY REPLACING ==:PREFIX:== BY ==WS-==.
+   *   COPY CUSTCOPY REPLACING LEADING ==OLD-== BY ==NEW-==.
+   */
+  private parseCopyStatement(statement: string, line: number): CopyStatement | null {
+    const upperStatement = statement.toUpperCase();
+    
+    // Extract COPY copybook-name
+    const copyMatch = upperStatement.match(/COPY\s+(\w[\w-]*)/);
+    if (!copyMatch) return null;
+    
+    const copyStmt: CopyStatement = {
+      copybook: copyMatch[1]!,
+      line,
+    };
+    
+    // IN/OF library
+    const libMatch = statement.match(/(?:IN|OF)\s+(\w[\w-]*)/i);
+    if (libMatch) {
+      copyStmt.library = libMatch[1];
+    }
+    
+    // REPLACING clause(s)
+    const replacingMatch = upperStatement.includes('REPLACING');
+    if (replacingMatch) {
+      copyStmt.replacing = [];
+      
+      // Pattern: REPLACING ==from== BY ==to== or REPLACING LEADING/TRAILING ==from== BY ==to==
+      // Also handles: REPLACING text-1 BY text-2
+      const replacingPattern = /(?:REPLACING\s+)?(?:(LEADING|TRAILING)\s+)?==([^=]+)==\s+BY\s+==([^=]+)==/gi;
+      let replMatch;
+      
+      while ((replMatch = replacingPattern.exec(statement)) !== null) {
+        const type = replMatch[1]?.toLowerCase() as 'leading' | 'trailing' | undefined;
+        copyStmt.replacing.push({
+          from: replMatch[2]!.trim(),
+          to: replMatch[3]!.trim(),
+          type: type || 'text',
+        });
+      }
+      
+      // Also try simple word replacement: REPLACING word-1 BY word-2
+      const simplePattern = /REPLACING\s+(\w[\w-:]*)\s+BY\s+(\w[\w-:]*)/gi;
+      while ((replMatch = simplePattern.exec(statement)) !== null) {
+        // Skip if already matched with == delimiters
+        if (!statement.includes('==')) {
+          copyStmt.replacing.push({
+            from: replMatch[1]!,
+            to: replMatch[2]!,
+            type: 'text',
+          });
+        }
+      }
+    }
+    
+    return copyStmt;
   }
 
   /**

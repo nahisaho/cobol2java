@@ -577,3 +577,100 @@ describe('Additional intrinsic functions', () => {
     expect(transformExpression('FUNCTION PI')).toContain('Math.PI');
   });
 });
+
+describe('INSPECT statement transformations', () => {
+  it('transforms INSPECT TALLYING FOR ALL', () => {
+    const result = transformStatement('INSPECT WS-STRING TALLYING WS-COUNT FOR ALL "A"');
+    expect(result).toContain('wsCount');
+    expect(result).toContain('wsString');
+    expect(result).toContain('replace');
+  });
+
+  it('transforms INSPECT TALLYING FOR CHARACTERS', () => {
+    const result = transformStatement('INSPECT WS-STRING TALLYING WS-COUNT FOR CHARACTERS');
+    expect(result).toContain('wsCount');
+    expect(result).toContain('length()');
+  });
+
+  it('transforms INSPECT TALLYING FOR LEADING', () => {
+    const result = transformStatement('INSPECT WS-STRING TALLYING WS-COUNT FOR LEADING "0"');
+    expect(result).toContain('wsCount');
+    expect(result).toContain('replaceFirst');
+  });
+
+  it('transforms INSPECT TALLYING FOR TRAILING', () => {
+    const result = transformStatement('INSPECT WS-STRING TALLYING WS-COUNT FOR TRAILING " "');
+    expect(result).toContain('wsCount');
+    expect(result).toContain('replaceFirst');
+  });
+
+  it('transforms INSPECT REPLACING ALL', () => {
+    const result = transformStatement('INSPECT WS-STRING REPLACING ALL "A" BY "B"');
+    expect(result).toContain('wsString');
+    expect(result).toContain('replace');
+  });
+
+  it('transforms INSPECT REPLACING FIRST', () => {
+    const result = transformStatement('INSPECT WS-STRING REPLACING FIRST "X" BY "Y"');
+    expect(result).toContain('wsString');
+    expect(result).toContain('replaceFirst');
+  });
+
+  it('transforms INSPECT REPLACING LEADING', () => {
+    const result = transformStatement('INSPECT WS-STRING REPLACING LEADING "0" BY " "');
+    expect(result).toContain('wsString');
+    expect(result).toContain('replaceFirst');
+    expect(result).toContain('^');
+  });
+
+  it('transforms INSPECT REPLACING TRAILING', () => {
+    const result = transformStatement('INSPECT WS-STRING REPLACING TRAILING " " BY "0"');
+    expect(result).toContain('wsString');
+    expect(result).toContain('replaceFirst');
+    expect(result).toContain('$');
+  });
+
+  it('transforms INSPECT CONVERTING', () => {
+    const result = transformStatement('INSPECT WS-STRING CONVERTING "abc" TO "ABC"');
+    expect(result).toContain('wsString');
+    expect(result).toContain('translateChars');
+  });
+});
+
+describe('CORRESPONDING statement transformations', () => {
+  it('transforms ADD CORRESPONDING', () => {
+    const result = transformStatement('ADD CORRESPONDING WS-FROM TO WS-TO');
+    expect(result).toContain('addCorresponding');
+    expect(result).toContain('wsFrom');
+    expect(result).toContain('wsTo');
+  });
+
+  it('transforms ADD CORR', () => {
+    const result = transformStatement('ADD CORR WS-SOURCE TO WS-TARGET');
+    expect(result).toContain('addCorresponding');
+  });
+
+  it('transforms SUBTRACT CORRESPONDING', () => {
+    const result = transformStatement('SUBTRACT CORRESPONDING WS-FROM FROM WS-TARGET');
+    expect(result).toContain('subtractCorresponding');
+    expect(result).toContain('wsFrom');
+    expect(result).toContain('wsTarget');
+  });
+
+  it('transforms SUBTRACT CORR', () => {
+    const result = transformStatement('SUBTRACT CORR WS-A FROM WS-B');
+    expect(result).toContain('subtractCorresponding');
+  });
+
+  it('transforms MOVE CORRESPONDING', () => {
+    const result = transformStatement('MOVE CORRESPONDING WS-REC1 TO WS-REC2');
+    expect(result).toContain('copyCorresponding');
+    expect(result).toContain('wsRec1');
+    expect(result).toContain('wsRec2');
+  });
+
+  it('transforms MOVE CORR', () => {
+    const result = transformStatement('MOVE CORR INPUT-REC TO OUTPUT-REC');
+    expect(result).toContain('copyCorresponding');
+  });
+});
