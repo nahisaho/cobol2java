@@ -323,3 +323,69 @@ describe('Exception handling', () => {
     expect(transformStatement('END-CALL')).toBe('}');
   });
 });
+
+describe('GO TO statement', () => {
+  it('transforms GO TO paragraph', () => {
+    expect(transformStatement('GO TO PROCESS-DATA')).toContain('processData()');
+  });
+});
+
+describe('PERFORM TIMES', () => {
+  it('transforms PERFORM N TIMES', () => {
+    expect(transformStatement('PERFORM 5 TIMES')).toContain('for');
+    expect(transformStatement('PERFORM 5 TIMES')).toContain('< 5');
+  });
+
+  it('transforms PERFORM paragraph N TIMES', () => {
+    expect(transformStatement('PERFORM PROCESS-RECORD 10 TIMES')).toContain('processRecord()');
+    expect(transformStatement('PERFORM PROCESS-RECORD 10 TIMES')).toContain('< 10');
+  });
+});
+
+describe('PERFORM THRU', () => {
+  it('transforms PERFORM THRU', () => {
+    expect(transformStatement('PERFORM PARA-A THRU PARA-B')).toContain('paraA()');
+    expect(transformStatement('PERFORM PARA-A THRU PARA-B')).toContain('THRU');
+  });
+});
+
+describe('SORT/MERGE', () => {
+  it('transforms SORT statement', () => {
+    expect(transformStatement('SORT SORT-WORK ON ASCENDING KEY SORT-KEY USING INPUT-FILE GIVING OUTPUT-FILE')).toContain('sort');
+  });
+});
+
+describe('CORRESPONDING', () => {
+  it('transforms ADD CORRESPONDING', () => {
+    expect(transformStatement('ADD CORRESPONDING WS-A TO WS-B')).toContain('addCorresponding');
+  });
+
+  it('transforms MOVE CORRESPONDING', () => {
+    expect(transformStatement('MOVE CORRESPONDING WS-A TO WS-B')).toContain('copyCorresponding');
+  });
+});
+
+describe('JSON/XML', () => {
+  it('transforms JSON GENERATE', () => {
+    expect(transformStatement('JSON GENERATE WS-JSON FROM WS-DATA')).toContain('ObjectMapper');
+    expect(transformStatement('JSON GENERATE WS-JSON FROM WS-DATA')).toContain('writeValueAsString');
+  });
+
+  it('transforms XML GENERATE', () => {
+    expect(transformStatement('XML GENERATE WS-XML FROM WS-DATA')).toContain('xmlMapper');
+  });
+});
+
+describe('EXEC SQL', () => {
+  it('transforms EXEC SQL', () => {
+    expect(transformStatement('EXEC SQL SELECT * FROM TABLE END-EXEC')).toContain('execute');
+    expect(transformStatement('EXEC SQL SELECT * FROM TABLE END-EXEC')).toContain('SQL');
+  });
+});
+
+describe('COPY statement', () => {
+  it('transforms COPY', () => {
+    expect(transformStatement('COPY CUSTOMER-REC')).toContain('COPY');
+    expect(transformStatement('COPY CUSTOMER-REC')).toContain('copybook');
+  });
+});

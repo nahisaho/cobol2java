@@ -359,6 +359,42 @@ export const STATEMENT_RULES: StatementRule[] = [
     },
     description: 'Perform varying loop',
   },
+  // PERFORM TIMES (fixed iteration loop)
+  {
+    pattern: /PERFORM\s+(\w[\w-]*)\s+(\d+)\s+TIMES/gi,
+    transform: (match) => {
+      const para = toJavaName(match[1]!);
+      const times = match[2];
+      return `for (int _i = 0; _i < ${times}; _i++) {\n            ${para}();\n        }`;
+    },
+    description: 'Perform N times with paragraph',
+  },
+  {
+    pattern: /PERFORM\s+(\d+)\s+TIMES/gi,
+    transform: (match) => {
+      return `for (int _i = 0; _i < ${match[1]}; _i++) {`;
+    },
+    description: 'Perform N times inline',
+  },
+  // PERFORM THRU (paragraph range)
+  {
+    pattern: /PERFORM\s+(\w[\w-]*)\s+THRU\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const from = toJavaName(match[1]!);
+      const thru = toJavaName(match[2]!);
+      return `${from}(); // THRU ${thru} - execute paragraphs ${from} through ${thru}`;
+    },
+    description: 'Perform paragraph range',
+  },
+  // PERFORM WITH TEST AFTER (do-while)
+  {
+    pattern: /PERFORM\s+WITH\s+TEST\s+AFTER\s+UNTIL\s+(.+)/gi,
+    transform: (match) => {
+      const condition = transformCondition(match[1]!);
+      return `do {`;
+    },
+    description: 'Perform with test after (do-while)',
+  },
   // PERFORM UNTIL (while loop header) - more specific than simple PERFORM
   {
     pattern: /PERFORM\s+UNTIL\s+(.+)/gi,
@@ -688,6 +724,354 @@ export const STATEMENT_RULES: StatementRule[] = [
     pattern: /NOT\s+AT\s+END/gi,
     transform: () => '// NOT AT END: Record was read successfully',
     description: 'Not at end (record read)',
+  },
+  // GO TO statement (unconditional branch)
+  {
+    pattern: /GO\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `// GO TO ${target} - converted to method call\n${target}(); return;`;
+    },
+    description: 'Go to paragraph',
+  },
+  // GO TO DEPENDING ON (computed goto)
+  {
+    pattern: /GO\s+TO\s+(.+)\s+DEPENDING\s+ON\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const targets = match[1]!.split(/\s+/).map(t => toJavaName(t));
+      const selector = toJavaName(match[2]!);
+      const cases = targets.map((t, i) => `case ${i + 1}: ${t}(); break;`).join('\n            ');
+      return `switch (${selector}) {\n            ${cases}\n        }`;
+    },
+    description: 'Go to depending on',
+  },
+  // NEXT SENTENCE (legacy)
+  {
+    pattern: /NEXT\s+SENTENCE/gi,
+    transform: () => '// NEXT SENTENCE - continue to next statement',
+    description: 'Next sentence',
+  },
+  // SORT statement
+  {
+    pattern: /SORT\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(\w[\w-]*)\s+GIVING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const sortWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const input = toJavaName(match[3]!);
+      const output = toJavaName(match[4]!);
+      return `// SORT: ${sortWork}\nCollections.sort(${input}, Comparator.comparing(r -> r.${key}));\n${output} = ${input};`;
+    },
+    description: 'Sort file',
+  },
+  // MERGE statement
+  {
+    pattern: /MERGE\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(.+?)\s+GIVING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const mergeWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const inputs = match[3]!.split(/\s+/).map(i => toJavaName(i)).join(', ');
+      const output = toJavaName(match[4]!);
+      return `// MERGE: ${mergeWork} with key ${key}\n${output} = merge(${inputs}, Comparator.comparing(r -> r.${key}));`;
+    },
+    description: 'Merge files',
+  },
+  // START statement (indexed file positioning)
+  {
+    pattern: /START\s+(\w[\w-]*)\s+KEY\s+(?:IS\s+)?(?:EQUAL\s+TO|=|GREATER\s+THAN|>|NOT\s+LESS\s+THAN|>=)\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      return `${file}.positionTo(${key}); // START - position indexed file`;
+    },
+    description: 'Start indexed file',
+  },
+  // DELETE statement (indexed/relative file)
+  {
+    pattern: /DELETE\s+(\w[\w-]*)\s+RECORD/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}.deleteCurrentRecord();`;
+    },
+    description: 'Delete record from file',
+  },
+  // RELEASE statement (sort input)
+  {
+    pattern: /RELEASE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const record = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `sortBuffer.add(${source}); // RELEASE ${record}`;
+    },
+    description: 'Release record to sort',
+  },
+  // RETURN statement (sort output)
+  {
+    pattern: /RETURN\s+(\w[\w-]*)\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target} = sortBuffer.poll(); // RETURN from ${file}`;
+    },
+    description: 'Return record from sort',
+  },
+  // ADD CORRESPONDING
+  {
+    pattern: /ADD\s+CORRESPONDING\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.addCorresponding(${source}); // ADD CORRESPONDING`;
+    },
+    description: 'Add corresponding fields',
+  },
+  // MOVE CORRESPONDING
+  {
+    pattern: /MOVE\s+CORRESPONDING\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.copyCorresponding(${source}); // MOVE CORRESPONDING`;
+    },
+    description: 'Move corresponding fields',
+  },
+  // SUBTRACT CORRESPONDING
+  {
+    pattern: /SUBTRACT\s+CORRESPONDING\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.subtractCorresponding(${source}); // SUBTRACT CORRESPONDING`;
+    },
+    description: 'Subtract corresponding fields',
+  },
+  // ROUNDED option
+  {
+    pattern: /(.+)\s+ROUNDED/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `${statement} // ROUNDED`;
+    },
+    description: 'Rounded arithmetic',
+  },
+  // ON SIZE ERROR
+  {
+    pattern: /ON\s+SIZE\s+ERROR\s+(.+)/gi,
+    transform: (match) => {
+      const handler = transformStatement(match[1]!) || match[1];
+      return `// ON SIZE ERROR\ntry { /* arithmetic */ } catch (ArithmeticException e) { ${handler} }`;
+    },
+    description: 'On size error handler',
+  },
+  // NOT ON SIZE ERROR
+  {
+    pattern: /NOT\s+ON\s+SIZE\s+ERROR/gi,
+    transform: () => '// NOT ON SIZE ERROR: Arithmetic succeeded',
+    description: 'Not on size error',
+  },
+  // COPY statement (copybook)
+  {
+    pattern: /COPY\s+(\w[\w-]*)(?:\s+REPLACING\s+(.+))?/gi,
+    transform: (match) => {
+      const copybook = toJavaName(match[1]!);
+      const replacing = match[2] ? ` // REPLACING ${match[2]}` : '';
+      return `// COPY ${match[1]}${replacing} - include copybook`;
+    },
+    description: 'Copy copybook',
+  },
+  // ENTRY statement (alternate entry point)
+  {
+    pattern: /ENTRY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const entryName = match[1]!.toLowerCase().replace(/-/g, '');
+      return `// ENTRY "${match[1]}"\npublic void ${entryName}() {`;
+    },
+    description: 'Entry point',
+  },
+  // CANCEL statement (unload program)
+  {
+    pattern: /CANCEL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const program = match[1]!.toLowerCase().replace(/-/g, '');
+      return `${program} = null; // CANCEL - unload program`;
+    },
+    description: 'Cancel (unload) program',
+  },
+  // ENABLE/DISABLE (MQ/CICS)
+  {
+    pattern: /ENABLE\s+(\w+)/gi,
+    transform: (match) => `// ENABLE ${match[1]}`,
+    description: 'Enable facility',
+  },
+  {
+    pattern: /DISABLE\s+(\w+)/gi,
+    transform: (match) => `// DISABLE ${match[1]}`,
+    description: 'Disable facility',
+  },
+  // USE statement (declaratives)
+  {
+    pattern: /USE\s+(?:GLOBAL\s+)?(?:AFTER\s+)?(?:STANDARD\s+)?(?:ERROR|EXCEPTION)\s+PROCEDURE\s+ON\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `// USE ERROR PROCEDURE ON ${match[1]} - file error handler`;
+    },
+    description: 'Use error procedure',
+  },
+  // TRANSFORM statement (legacy)
+  {
+    pattern: /TRANSFORM\s+(\w[\w-]*)\s+CHARACTERS\s+FROM\s+"([^"]+)"\s+TO\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const from = match[2];
+      const to = match[3];
+      return `// TRANSFORM (legacy)\nfor (int _i = 0; _i < "${from}".length(); _i++) { ${target} = ${target}.replace("${from}".charAt(_i), "${to}".charAt(_i)); }`;
+    },
+    description: 'Transform characters (legacy)',
+  },
+  // TALLYING clause for INSPECT
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+(?:CHARACTERS|ALL|LEADING)\s*$/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      return `${counter} = ${source}.length(); // INSPECT TALLYING`;
+    },
+    description: 'Inspect tallying characters',
+  },
+  // INSPECT CONVERTING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+CONVERTING\s+"([^"]+)"\s+TO\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const from = match[2];
+      const to = match[3];
+      return `// INSPECT CONVERTING\nfor (int _i = 0; _i < "${from}".length(); _i++) {\n    ${target} = ${target}.replace(String.valueOf("${from}".charAt(_i)), String.valueOf("${to}".charAt(_i)));\n}`;
+    },
+    description: 'Inspect converting',
+  },
+  // ALLOCATE statement (dynamic memory)
+  {
+    pattern: /ALLOCATE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = new ${toClassName(match[1]!)}(); // ALLOCATE`;
+    },
+    description: 'Allocate memory',
+  },
+  // FREE statement (dynamic memory)
+  {
+    pattern: /FREE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = null; // FREE`;
+    },
+    description: 'Free memory',
+  },
+  // JSON GENERATE (must be before GENERATE)
+  {
+    pattern: /JSON\s+GENERATE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `${target} = new ObjectMapper().writeValueAsString(${source}); // JSON GENERATE`;
+    },
+    description: 'Generate JSON',
+  },
+  // JSON PARSE
+  {
+    pattern: /JSON\s+PARSE\s+(\w[\w-]*)\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target} = new ObjectMapper().readValue(${source}, ${toClassName(match[2]!)}.class); // JSON PARSE`;
+    },
+    description: 'Parse JSON',
+  },
+  // XML GENERATE (must be before GENERATE)
+  {
+    pattern: /XML\s+GENERATE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `${target} = xmlMapper.writeValueAsString(${source}); // XML GENERATE`;
+    },
+    description: 'Generate XML',
+  },
+  // XML PARSE
+  {
+    pattern: /XML\s+PARSE\s+(\w[\w-]*)\s+PROCESSING\s+PROCEDURE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const handler = toJavaName(match[2]!);
+      return `// XML PARSE\nSAXParserFactory.newInstance().newSAXParser().parse(new InputSource(new StringReader(${source})), ${handler});`;
+    },
+    description: 'Parse XML with SAX',
+  },
+  // GENERATE statement (Report Writer)
+  {
+    pattern: /GENERATE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const report = toJavaName(match[1]!);
+      return `${report}.generate(); // GENERATE report line`;
+    },
+    description: 'Generate report line',
+  },
+  // INITIATE statement (Report Writer)
+  {
+    pattern: /INITIATE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const report = toJavaName(match[1]!);
+      return `${report}.initiate(); // INITIATE report`;
+    },
+    description: 'Initiate report',
+  },
+  // TERMINATE statement (Report Writer)
+  {
+    pattern: /TERMINATE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const report = toJavaName(match[1]!);
+      return `${report}.terminate(); // TERMINATE report`;
+    },
+    description: 'Terminate report',
+  },
+  // INVOKE statement (OO COBOL)
+  {
+    pattern: /INVOKE\s+(\w[\w-]*)\s+"([^"]+)"(?:\s+USING\s+(.+?))?(?:\s+RETURNING\s+(\w[\w-]*))?/gi,
+    transform: (match) => {
+      const obj = toJavaName(match[1]!);
+      const method = match[2]!.toLowerCase().replace(/-/g, '');
+      const params = match[3] ? match[3].split(/\s+/).map(p => toJavaName(p)).join(', ') : '';
+      const ret = match[4] ? `${toJavaName(match[4])} = ` : '';
+      return `${ret}${obj}.${method}(${params});`;
+    },
+    description: 'Invoke method (OO)',
+  },
+  // JSON GENERATE
+  {
+    pattern: /JSON\s+GENERATE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const source = toJavaName(match[2]!);
+      return `${target} = new ObjectMapper().writeValueAsString(${source}); // JSON GENERATE`;
+    },
+    description: 'Generate JSON',
+  },
+  // EXEC SQL (embedded SQL)
+  {
+    pattern: /EXEC\s+SQL\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const sql = match[1]!.trim();
+      return `// EXEC SQL\nstatement.execute("${sql.replace(/"/g, '\\"')}");`;
+    },
+    description: 'Execute SQL',
+  },
+  // EXEC CICS
+  {
+    pattern: /EXEC\s+CICS\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cmd = match[1]!.trim();
+      return `// EXEC CICS ${cmd}\ncicsTransaction.execute("${cmd}");`;
+    },
+    description: 'Execute CICS command',
   },
 ];
 
