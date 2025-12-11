@@ -389,3 +389,49 @@ describe('COPY statement', () => {
     expect(transformStatement('COPY CUSTOMER-REC')).toContain('copybook');
   });
 });
+
+describe('Reference modification', () => {
+  it('transforms substring with start and length', () => {
+    expect(transformExpression('WS-NAME(1:5)')).toContain('substring');
+  });
+
+  it('transforms substring with start only', () => {
+    expect(transformExpression('WS-FIELD(3:)')).toContain('substring');
+  });
+});
+
+describe('Intrinsic functions', () => {
+  it('transforms FUNCTION LENGTH', () => {
+    expect(transformExpression('FUNCTION LENGTH(WS-NAME)')).toContain('.length()');
+  });
+
+  it('transforms FUNCTION UPPER-CASE', () => {
+    expect(transformExpression('FUNCTION UPPER-CASE(WS-TEXT)')).toContain('.toUpperCase()');
+  });
+
+  it('transforms FUNCTION LOWER-CASE', () => {
+    expect(transformExpression('FUNCTION LOWER-CASE(WS-TEXT)')).toContain('.toLowerCase()');
+  });
+
+  it('transforms FUNCTION TRIM', () => {
+    expect(transformExpression('FUNCTION TRIM(WS-TEXT)')).toContain('.trim()');
+  });
+
+  it('transforms FUNCTION NUMVAL', () => {
+    expect(transformExpression('FUNCTION NUMVAL(WS-NUM)')).toContain('parse');
+  });
+
+  it('transforms FUNCTION CURRENT-DATE', () => {
+    expect(transformExpression('FUNCTION CURRENT-DATE')).toContain('LocalDateTime');
+  });
+});
+
+describe('COMP-4/COMP-5', () => {
+  it('maps COMP-4 to int', () => {
+    expect(mapDataType('COMP-4')).toBe('int');
+  });
+
+  it('maps COMP-5 to int', () => {
+    expect(mapDataType('COMP-5')).toBe('int');
+  });
+});

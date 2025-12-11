@@ -125,6 +125,61 @@ export const DATA_TYPE_MAPPINGS: DataTypeMapping[] = [
     defaultValue: 'BigDecimal.ZERO',
     description: 'Packed decimal',
   },
+  // IBM COBOL COMP-4 and COMP-5 (binary types)
+  {
+    cobolPic: /COMP-4$/,
+    javaType: 'int',
+    defaultValue: '0',
+    description: 'IBM Binary (same as COMP)',
+  },
+  {
+    cobolPic: /COMP-5$/,
+    javaType: 'int',
+    defaultValue: '0',
+    description: 'IBM Native binary (platform-dependent)',
+  },
+  {
+    cobolPic: /BINARY$/,
+    javaType: 'int',
+    defaultValue: '0',
+    description: 'Binary integer',
+  },
+  {
+    cobolPic: /BINARY-CHAR$/,
+    javaType: 'byte',
+    defaultValue: '(byte) 0',
+    description: 'Binary char (1 byte)',
+  },
+  {
+    cobolPic: /BINARY-SHORT$/,
+    javaType: 'short',
+    defaultValue: '(short) 0',
+    description: 'Binary short (2 bytes)',
+  },
+  {
+    cobolPic: /BINARY-LONG$/,
+    javaType: 'int',
+    defaultValue: '0',
+    description: 'Binary long (4 bytes)',
+  },
+  {
+    cobolPic: /BINARY-DOUBLE$/,
+    javaType: 'long',
+    defaultValue: '0L',
+    description: 'Binary double (8 bytes)',
+  },
+  {
+    cobolPic: /POINTER$/,
+    javaType: 'Object',
+    defaultValue: 'null',
+    description: 'Pointer type',
+  },
+  {
+    cobolPic: /INDEX$/,
+    javaType: 'int',
+    defaultValue: '0',
+    description: 'Index type',
+  },
 ];
 
 /**
@@ -1076,10 +1131,163 @@ export const STATEMENT_RULES: StatementRule[] = [
 ];
 
 /**
+ * COBOL Intrinsic Functions mapping to Java
+ */
+export const INTRINSIC_FUNCTIONS: Record<string, (args: string[]) => string> = {
+  'LENGTH': (args) => `${args[0]}.length()`,
+  'BYTE-LENGTH': (args) => `${args[0]}.getBytes().length`,
+  'UPPER-CASE': (args) => `${args[0]}.toUpperCase()`,
+  'LOWER-CASE': (args) => `${args[0]}.toLowerCase()`,
+  'REVERSE': (args) => `new StringBuilder(${args[0]}).reverse().toString()`,
+  'TRIM': (args) => args.length > 1 ? `${args[0]}.trim()` : `${args[0]}.trim()`,
+  'NUMVAL': (args) => `Double.parseDouble(${args[0]}.trim())`,
+  'NUMVAL-C': (args) => `Double.parseDouble(${args[0]}.trim().replace(",", "").replace("$", ""))`,
+  'INTEGER': (args) => `(int) Math.floor(${args[0]})`,
+  'INTEGER-PART': (args) => `(int) ${args[0]}`,
+  'ABS': (args) => `Math.abs(${args[0]})`,
+  'MAX': (args) => `Math.max(${args.join(', ')})`,
+  'MIN': (args) => `Math.min(${args.join(', ')})`,
+  'MOD': (args) => `${args[0]} % ${args[1]}`,
+  'REM': (args) => `${args[0]} % ${args[1]}`,
+  'SUM': (args) => args.length === 1 ? args[0]! : `(${args.join(' + ')})`,
+  'SQRT': (args) => `Math.sqrt(${args[0]})`,
+  'LOG': (args) => `Math.log(${args[0]})`,
+  'LOG10': (args) => `Math.log10(${args[0]})`,
+  'EXP': (args) => `Math.exp(${args[0]})`,
+  'SIN': (args) => `Math.sin(${args[0]})`,
+  'COS': (args) => `Math.cos(${args[0]})`,
+  'TAN': (args) => `Math.tan(${args[0]})`,
+  'ASIN': (args) => `Math.asin(${args[0]})`,
+  'ACOS': (args) => `Math.acos(${args[0]})`,
+  'ATAN': (args) => `Math.atan(${args[0]})`,
+  'CURRENT-DATE': () => `java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSnnnn"))`,
+  'WHEN-COMPILED': () => `"${new Date().toISOString().replace(/[-:T.Z]/g, '').substring(0, 21)}"`,
+  'DATE-OF-INTEGER': (args) => `java.time.LocalDate.ofEpochDay(${args[0]} - 1).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)`,
+  'INTEGER-OF-DATE': (args) => `(int) java.time.LocalDate.parse(String.valueOf(${args[0]}), java.time.format.DateTimeFormatter.BASIC_ISO_DATE).toEpochDay() + 1`,
+  'DAY-OF-INTEGER': (args) => `java.time.LocalDate.ofEpochDay(${args[0]} - 1).format(java.time.format.DateTimeFormatter.ofPattern("yyyyDDD"))`,
+  'INTEGER-OF-DAY': (args) => `(int) java.time.LocalDate.parse(String.valueOf(${args[0]}), java.time.format.DateTimeFormatter.ofPattern("yyyyDDD")).toEpochDay() + 1`,
+  'ORD': (args) => `(int) ${args[0]}.charAt(0)`,
+  'ORD-MAX': (args) => `IntStream.range(0, ${args.length}).boxed().max(Comparator.comparing(i -> ${args.map((a, i) => `i == ${i} ? ${a}`).join(' : ')})).orElse(0) + 1`,
+  'ORD-MIN': (args) => `IntStream.range(0, ${args.length}).boxed().min(Comparator.comparing(i -> ${args.map((a, i) => `i == ${i} ? ${a}`).join(' : ')})).orElse(0) + 1`,
+  'CHAR': (args) => `String.valueOf((char) ${args[0]})`,
+  'CONCATENATE': (args) => args.join(' + '),
+  'SUBSTITUTE': (args) => {
+    if (args.length >= 3) {
+      return `${args[0]}.replace(${args[1]}, ${args[2]})`;
+    }
+    return args[0]!;
+  },
+  'SUBSTITUTE-CASE': (args) => {
+    if (args.length >= 3) {
+      return `${args[0]}.replaceAll("(?i)" + ${args[1]}, ${args[2]})`;
+    }
+    return args[0]!;
+  },
+  'DISPLAY-OF': (args) => `${args[0]}`, // National to display
+  'NATIONAL-OF': (args) => `${args[0]}`, // Display to national
+  'RANDOM': (args) => args.length > 0 ? `new Random(${args[0]}).nextDouble()` : `Math.random()`,
+  'MEDIAN': (args) => `getMedian(Arrays.asList(${args.join(', ')}))`,
+  'MEAN': (args) => `(${args.join(' + ')}) / ${args.length}`,
+  'VARIANCE': (args) => `getVariance(Arrays.asList(${args.join(', ')}))`,
+  'STANDARD-DEVIATION': (args) => `Math.sqrt(getVariance(Arrays.asList(${args.join(', ')})))`,
+  'RANGE': (args) => `(Math.max(${args.join(', ')}) - Math.min(${args.join(', ')}))`,
+  'PRESENT-VALUE': (args) => `getPresentValue(${args[0]}, Arrays.asList(${args.slice(1).join(', ')}))`,
+  'ANNUITY': (args) => `${args[0]} / (1 - Math.pow(1 + ${args[0]}, -${args[1]}))`,
+  'TEST-NUMVAL': (args) => `isNumeric(${args[0]}) ? 0 : 1`,
+  'TEST-NUMVAL-C': (args) => `isNumericCurrency(${args[0]}) ? 0 : 1`,
+};
+
+/**
+ * Transform COBOL reference modification to Java substring
+ * WS-FIELD(start:length) -> wsField.substring(start-1, start-1+length)
+ */
+export function transformReferenceModification(expr: string): string {
+  // Pattern: IDENTIFIER(start:length) or IDENTIFIER(start:)
+  const refModPattern = /(\w[\w-]*)\s*\(\s*(\d+|\w[\w-]*)\s*:\s*(\d+|\w[\w-]*)?\s*\)/gi;
+  
+  return expr.replace(refModPattern, (match, identifier, start, length) => {
+    const javaVar = toJavaName(identifier);
+    const javaStart = /^\d+$/.test(start) ? start : toJavaName(start);
+    
+    if (length === undefined || length === '') {
+      // (start:) means from start to end
+      return `${javaVar}.substring(${javaStart} - 1)`;
+    }
+    
+    const javaLength = /^\d+$/.test(length) ? length : toJavaName(length);
+    
+    // Convert COBOL 1-based to Java 0-based
+    if (/^\d+$/.test(javaStart) && /^\d+$/.test(javaLength)) {
+      const startNum = parseInt(javaStart, 10);
+      const lengthNum = parseInt(javaLength, 10);
+      return `${javaVar}.substring(${startNum - 1}, ${startNum - 1 + lengthNum})`;
+    }
+    
+    return `${javaVar}.substring(${javaStart} - 1, ${javaStart} - 1 + ${javaLength})`;
+  });
+}
+
+/**
+ * Transform COBOL intrinsic function to Java
+ * FUNCTION LENGTH(WS-FIELD) -> wsField.length()
+ * FUNCTION CURRENT-DATE -> LocalDateTime.now()...
+ */
+export function transformIntrinsicFunction(expr: string): string {
+  // Pattern 1: FUNCTION FUNC-NAME(args) - with arguments
+  const funcPatternWithArgs = /FUNCTION\s+([A-Z][A-Z0-9-]*)\s*\(([^)]*)\)/gi;
+  
+  let result = expr.replace(funcPatternWithArgs, (match, funcName, argsStr) => {
+    const normalizedName = funcName.toUpperCase();
+    const transformer = INTRINSIC_FUNCTIONS[normalizedName];
+    
+    if (!transformer) {
+      return `/* FUNCTION ${funcName} not supported */ ${match}`;
+    }
+    
+    // Parse arguments
+    const args = argsStr
+      .split(',')
+      .map((arg: string) => arg.trim())
+      .filter((arg: string) => arg.length > 0)
+      .map((arg: string) => {
+        // Transform variable names in args
+        if (arg.startsWith('"') || arg.startsWith("'") || /^\d/.test(arg)) {
+          return arg; // Literal
+        }
+        return toJavaName(arg);
+      });
+    
+    return transformer(args);
+  });
+  
+  // Pattern 2: FUNCTION FUNC-NAME (without arguments) - for functions like CURRENT-DATE
+  const funcPatternNoArgs = /FUNCTION\s+([A-Z][A-Z0-9-]*)(?!\s*\()/gi;
+  
+  result = result.replace(funcPatternNoArgs, (match, funcName) => {
+    const normalizedName = funcName.toUpperCase();
+    const transformer = INTRINSIC_FUNCTIONS[normalizedName];
+    
+    if (!transformer) {
+      return `/* FUNCTION ${funcName} not supported */ ${match}`;
+    }
+    
+    return transformer([]);
+  });
+  
+  return result;
+}
+
+/**
  * Transform COBOL expression to Java expression
  */
 export function transformExpression(cobolExpr: string): string {
   let expr = cobolExpr.trim();
+  
+  // Transform intrinsic functions first
+  expr = transformIntrinsicFunction(expr);
+  
+  // Transform reference modifications
+  expr = transformReferenceModification(expr);
   
   // Replace COBOL operators with Java operators
   expr = expr.replace(/\*\*/g, '^'); // Power (will need Math.pow)
@@ -1087,9 +1295,16 @@ export function transformExpression(cobolExpr: string): string {
   expr = expr.replace(/\bOR\b/gi, '||');
   expr = expr.replace(/\bNOT\b/gi, '!');
   
-  // Convert variable names
-  expr = expr.replace(/\b([A-Z][A-Z0-9-]*[A-Z0-9])\b/gi, (match) => {
+  // Convert variable names (but not already converted ones)
+  // Skip Java qualified names (contain dots), Java keywords, and already camelCase names
+  expr = expr.replace(/\b([A-Z][A-Z0-9-]*[A-Z0-9])\b/g, (match, group, offset, fullStr) => {
     if (/^\d/.test(match)) return match; // Skip numbers
+    // Skip if it looks like a Java method call or already camelCase
+    if (/^[a-z]/.test(match)) return match;
+    // Skip if preceded by a dot (part of Java qualified name like java.time.LocalDateTime)
+    if (offset > 0 && fullStr[offset - 1] === '.') return match;
+    // Skip if followed by a dot (part of Java qualified name)
+    if (fullStr[offset + match.length] === '.') return match;
     return toJavaName(match);
   });
   
@@ -1172,10 +1387,108 @@ export function parseIfStatement(lines: string[]): IfBlock | null {
 }
 
 /**
+ * Context for 88-level condition lookups
+ * Should be set during transformation with data items from parser
+ */
+let level88Context: Map<string, { parentName: string; values: string[] }> = new Map();
+
+/**
+ * Set the 88-level condition context for transformations
+ */
+export function setLevel88Context(dataItems: Array<{ level: number; name: string; values?: string[] }>): void {
+  level88Context = new Map();
+  let currentParent: string | undefined;
+  
+  for (const item of dataItems) {
+    if (item.level !== 88) {
+      currentParent = item.name;
+    } else if (currentParent && item.values) {
+      level88Context.set(item.name.toUpperCase(), {
+        parentName: currentParent,
+        values: item.values,
+      });
+    }
+  }
+}
+
+/**
+ * Transform 88-level condition name to Java condition
+ */
+export function transform88LevelCondition(conditionName: string): string | null {
+  const upper = conditionName.toUpperCase().replace(/-/g, '-');
+  const condInfo = level88Context.get(upper);
+  
+  if (!condInfo) {
+    return null;
+  }
+  
+  const javaVar = toJavaName(condInfo.parentName);
+  const values = condInfo.values;
+  
+  if (values.length === 0) {
+    return null;
+  }
+  
+  if (values.length === 1) {
+    const val = values[0]!;
+    // Check if it's a range (from...to format)
+    if (val.includes('...')) {
+      const [from, to] = val.split('...');
+      // Range comparison
+      if (/^\d+$/.test(from!) && /^\d+$/.test(to!)) {
+        return `(${javaVar} >= ${from} && ${javaVar} <= ${to})`;
+      }
+      // Character range
+      return `(${javaVar}.compareTo("${from}") >= 0 && ${javaVar}.compareTo("${to}") <= 0)`;
+    }
+    // Single value
+    if (/^\d+$/.test(val)) {
+      return `${javaVar} == ${val}`;
+    }
+    return `${javaVar}.equals("${val}")`;
+  }
+  
+  // Multiple values - build OR conditions
+  const conditions = values.map(val => {
+    if (val.includes('...')) {
+      const [from, to] = val.split('...');
+      if (/^\d+$/.test(from!) && /^\d+$/.test(to!)) {
+        return `(${javaVar} >= ${from} && ${javaVar} <= ${to})`;
+      }
+      return `(${javaVar}.compareTo("${from}") >= 0 && ${javaVar}.compareTo("${to}") <= 0)`;
+    }
+    if (/^\d+$/.test(val)) {
+      return `${javaVar} == ${val}`;
+    }
+    return `${javaVar}.equals("${val}")`;
+  });
+  
+  return `(${conditions.join(' || ')})`;
+}
+
+/**
  * Transform COBOL condition to Java condition
  */
 export function transformCondition(cobolCondition: string): string {
   let cond = cobolCondition.trim();
+  
+  // Check for 88-level condition name (single identifier that might be a condition)
+  const singleIdMatch = cond.match(/^([A-Z][\w-]*)$/i);
+  if (singleIdMatch) {
+    const level88Result = transform88LevelCondition(singleIdMatch[1]!);
+    if (level88Result) {
+      return level88Result;
+    }
+  }
+  
+  // Check for NOT condition-name
+  const notCondMatch = cond.match(/^NOT\s+([A-Z][\w-]*)$/i);
+  if (notCondMatch) {
+    const level88Result = transform88LevelCondition(notCondMatch[1]!);
+    if (level88Result) {
+      return `!(${level88Result})`;
+    }
+  }
   
   // Replace comparison operators (order matters - more specific patterns first)
   cond = cond.replace(/\bIS\s+NOT\s+EQUAL\s+TO\b/gi, '!=');

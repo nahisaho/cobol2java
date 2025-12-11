@@ -31,11 +31,23 @@ export interface DataItem {
   name: string;
   pic?: string;
   value?: string;
+  values?: string[]; // For 88-level conditions with THRU/THROUGH
   occurs?: number;
   usage?: string;
   redefines?: string;
   indexed?: string[];
   key?: string;
+  parentName?: string; // For 88-level conditions
+}
+
+/**
+ * Condition name (88-level) mapping
+ */
+export interface ConditionName {
+  name: string;
+  parentName: string;
+  values: string[];
+  thruValues?: Array<{ from: string; to: string }>;
 }
 
 /**
@@ -255,6 +267,21 @@ export class CobolParser {
   private parseDataItem(line: string): DataItem | null {
     const upperLine = line.toUpperCase();
     
+    // Parse 88-level condition names first
+    // Pattern: 88 CONDITION-NAME VALUE 'Y' or VALUE 'A' THRU 'Z'.
+    const level88Match = upperLine.match(
+      /^88\s+(\w[\w-]*)\s+VALUES?\s+(.+?)\.?\s*$/i
+    );
+    
+    if (level88Match) {
+      const dataItem: DataItem = {
+        level: 88,
+        name: level88Match[1]!,
+        values: this.parseLevel88Values(level88Match[2]!),
+      };
+      return dataItem;
+    }
+    
     // Try full pattern with PIC and VALUE
     // Pattern: 01 WS-NAME PIC X(10) VALUE "TEST".
     // Allow decimal points in VALUE by using a different approach
@@ -370,5 +397,34 @@ export class CobolParser {
       'DISPLAY', 'ACCEPT', 'STOP', 'GOBACK',
     ];
     return keywords.includes(word.toUpperCase());
+  }
+
+  /**
+   * Parse 88-level condition values
+   * Handles: VALUE 'A' 'B' 'C', VALUE 'A' THRU 'Z', VALUE 1 2 3
+   */
+  private parseLevel88Values(valueStr: string): string[] {
+    const values: string[] = [];
+    
+    // Handle THRU/THROUGH ranges
+    const thruPattern = /(?:['"]([^'"]+)['"]|(\d+))\s+(?:THRU|THROUGH)\s+(?:['"]([^'"]+)['"]|(\d+))/gi;
+    let thruMatch;
+    let processedStr = valueStr;
+    
+    while ((thruMatch = thruPattern.exec(valueStr)) !== null) {
+      const fromVal = thruMatch[1] || thruMatch[2];
+      const toVal = thruMatch[3] || thruMatch[4];
+      values.push(`${fromVal}...${toVal}`); // Range notation
+      processedStr = processedStr.replace(thruMatch[0], '');
+    }
+    
+    // Handle individual values (quoted strings or numbers)
+    const valuePattern = /['"]([^'"]+)['"]|(\d+)/g;
+    let match;
+    while ((match = valuePattern.exec(processedStr)) !== null) {
+      values.push(match[1] || match[2]!);
+    }
+    
+    return values;
   }
 }
