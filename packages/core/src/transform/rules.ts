@@ -760,6 +760,16 @@ private void debug${toClassName(match[1]!)}() {
     transform: (match) => `System.out.println(${toJavaName(match[1]!)});`,
     description: 'Display variable',
   },
+  // MOVE CORRESPONDING / CORR (must be before simpler MOVE patterns)
+  {
+    pattern: /MOVE\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.copyCorresponding(${source}); // MOVE CORRESPONDING`;
+    },
+    description: 'Move corresponding fields',
+  },
   // MOVE statement
   {
     pattern: /MOVE\s+"([^"]+)"\s+TO\s+(\w[\w-]*)/gi,
@@ -775,6 +785,16 @@ private void debug${toClassName(match[1]!)}() {
     pattern: /MOVE\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
     transform: (match) => `${toJavaName(match[2]!)} = ${toJavaName(match[1]!)};`,
     description: 'Move variable to variable',
+  },
+  // ADD CORRESPONDING / CORR (must be before simpler ADD patterns)
+  {
+    pattern: /ADD\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.addCorresponding(${source}); // ADD CORRESPONDING`;
+    },
+    description: 'Add corresponding fields',
   },
   // ADD statement - GIVING forms first (more specific)
   {
@@ -797,6 +817,16 @@ private void debug${toClassName(match[1]!)}() {
     pattern: /ADD\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
     transform: (match) => `${toJavaName(match[2]!)} += ${toJavaName(match[1]!)};`,
     description: 'Add variable to variable',
+  },
+  // SUBTRACT CORRESPONDING / CORR (must be before simpler SUBTRACT patterns)
+  {
+    pattern: /SUBTRACT\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `${target}.subtractCorresponding(${source}); // SUBTRACT CORRESPONDING`;
+    },
+    description: 'Subtract corresponding fields',
   },
   // SUBTRACT statement - GIVING forms first
   {
@@ -1499,35 +1529,14 @@ private void debug${toClassName(match[1]!)}() {
     },
     description: 'Random function',
   },
-  // ADD CORRESPONDING / CORR (must be before simpler ADD patterns)
+  // SEARCH ALL statement (binary search) - must be before simpler SEARCH
   {
-    pattern: /ADD\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
+    pattern: /SEARCH\s+ALL\s+(\w[\w-]*)/gi,
     transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.addCorresponding(${source}); // ADD CORRESPONDING`;
+      const table = toJavaName(match[1]!);
+      return `// SEARCH ALL ${table}: Binary search (requires sorted table)`;
     },
-    description: 'Add corresponding fields',
-  },
-  // SUBTRACT CORRESPONDING / CORR
-  {
-    pattern: /SUBTRACT\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.subtractCorresponding(${source}); // SUBTRACT CORRESPONDING`;
-    },
-    description: 'Subtract corresponding fields',
-  },
-  // MOVE CORRESPONDING / CORR (must be before simpler MOVE patterns)
-  {
-    pattern: /MOVE\s+(?:CORRESPONDING|CORR)\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const source = toJavaName(match[1]!);
-      const target = toJavaName(match[2]!);
-      return `${target}.copyCorresponding(${source}); // MOVE CORRESPONDING`;
-    },
-    description: 'Move corresponding fields',
+    description: 'Search all (binary search)',
   },
   // SEARCH statement (linear search)
   {
@@ -1537,15 +1546,6 @@ private void debug${toClassName(match[1]!)}() {
       return `// SEARCH ${table}: Linear search through table`;
     },
     description: 'Search table (linear)',
-  },
-  // SEARCH ALL statement (binary search)
-  {
-    pattern: /SEARCH\s+ALL\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const table = toJavaName(match[1]!);
-      return `// SEARCH ALL ${table}: Binary search (requires sorted table)`;
-    },
-    description: 'Search all (binary search)',
   },
   // AT END clause for SEARCH
   {
