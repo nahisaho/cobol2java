@@ -482,6 +482,138 @@ cicsTransaction.transfer("${program}", ${commarea});`;
     description: 'Execute CICS command (general)',
   },
   
+  // ==== Communication Section statements ====
+  // SEND message
+  {
+    pattern: /SEND\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const queue = toJavaName(match[1]!);
+      const data = toJavaName(match[2]!);
+      return `messageQueue.send("${match[1]}", ${data}); // SEND message`;
+    },
+    description: 'Send message to queue',
+  },
+  // RECEIVE message
+  {
+    pattern: /RECEIVE\s+(\w[\w-]*)\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const queue = toJavaName(match[1]!);
+      const data = toJavaName(match[2]!);
+      return `${data} = messageQueue.receive("${match[1]}"); // RECEIVE message`;
+    },
+    description: 'Receive message from queue',
+  },
+  // ACCEPT MESSAGE COUNT
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+MESSAGE\s+COUNT/gi,
+    transform: (match) => {
+      const counter = toJavaName(match[1]!);
+      return `${counter} = messageQueue.getMessageCount(); // ACCEPT MESSAGE COUNT`;
+    },
+    description: 'Accept message count',
+  },
+  // PURGE queue
+  {
+    pattern: /PURGE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const queue = toJavaName(match[1]!);
+      return `messageQueue.purge("${match[1]}"); // PURGE queue`;
+    },
+    description: 'Purge message queue',
+  },
+  // ENABLE INPUT/OUTPUT
+  {
+    pattern: /ENABLE\s+(INPUT|OUTPUT)\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const mode = match[1]!.toLowerCase();
+      const queue = toJavaName(match[2]!);
+      return `messageQueue.enable${match[1]!.charAt(0) + match[1]!.slice(1).toLowerCase()}("${match[2]}"); // ENABLE ${mode}`;
+    },
+    description: 'Enable queue input/output',
+  },
+  // DISABLE INPUT/OUTPUT
+  {
+    pattern: /DISABLE\s+(INPUT|OUTPUT)\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const mode = match[1]!.toLowerCase();
+      const queue = toJavaName(match[2]!);
+      return `messageQueue.disable${match[1]!.charAt(0) + match[1]!.slice(1).toLowerCase()}("${match[2]}"); // DISABLE ${mode}`;
+    },
+    description: 'Disable queue input/output',
+  },
+  
+  // ==== File Status handling ====
+  // FILE STATUS check patterns
+  {
+    pattern: /IF\s+(\w[\w-]*-STATUS)\s*=\s*"00"/gi,
+    transform: (match) => {
+      const status = toJavaName(match[1]!);
+      return `if (${status}.equals("00")) { // File operation successful`;
+    },
+    description: 'Check file status success',
+  },
+  {
+    pattern: /IF\s+(\w[\w-]*-STATUS)\s*=\s*"10"/gi,
+    transform: (match) => {
+      const status = toJavaName(match[1]!);
+      return `if (${status}.equals("10")) { // End of file`;
+    },
+    description: 'Check file status EOF',
+  },
+  {
+    pattern: /IF\s+(\w[\w-]*-STATUS)\s*=\s*"23"/gi,
+    transform: (match) => {
+      const status = toJavaName(match[1]!);
+      return `if (${status}.equals("23")) { // Record not found`;
+    },
+    description: 'Check file status not found',
+  },
+  {
+    pattern: /IF\s+(\w[\w-]*-STATUS)\s*NOT\s*=\s*"00"/gi,
+    transform: (match) => {
+      const status = toJavaName(match[1]!);
+      return `if (!${status}.equals("00")) { // File operation error`;
+    },
+    description: 'Check file status error',
+  },
+  
+  // ==== Debug Declaratives ====
+  // USE FOR DEBUGGING
+  {
+    pattern: /USE\s+(?:FOR\s+)?DEBUGGING\s+(?:ON\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `// USE FOR DEBUGGING ON ${match[1]}
+private void debug${toClassName(match[1]!)}() {
+    // Debug declarative - called when ${match[1]} is referenced`;
+    },
+    description: 'Debug declarative',
+  },
+  // DEBUG-ITEM reference
+  {
+    pattern: /DEBUG-ITEM/gi,
+    transform: () => `debugContext.getDebugItem() // DEBUG-ITEM`,
+    description: 'Debug item reference',
+  },
+  // DEBUG-LINE reference
+  {
+    pattern: /DEBUG-LINE/gi,
+    transform: () => `debugContext.getDebugLine() // DEBUG-LINE`,
+    description: 'Debug line reference',
+  },
+  // DEBUG-NAME reference
+  {
+    pattern: /DEBUG-NAME/gi,
+    transform: () => `debugContext.getDebugName() // DEBUG-NAME`,
+    description: 'Debug name reference',
+  },
+  // DEBUG-CONTENTS reference
+  {
+    pattern: /DEBUG-CONTENTS/gi,
+    transform: () => `debugContext.getDebugContents() // DEBUG-CONTENTS`,
+    description: 'Debug contents reference',
+  },
+
   // Screen attributes
   {
     pattern: /BLANK\s+SCREEN/gi,
@@ -739,7 +871,55 @@ cicsTransaction.transfer("${program}", ${commarea});`;
     transform: () => 'return;',
     description: 'Go back',
   },
-  // PERFORM VARYING (for loop) - most specific, must be first
+  // PERFORM VARYING with 2 AFTER clauses (3-level nested loop) - MOST SPECIFIC FIRST
+  {
+    pattern: /PERFORM\s+(\w[\w-]*)\s+VARYING\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)\s+AFTER\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)\s+AFTER\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)/gi,
+    transform: (match) => {
+      const para = toJavaName(match[1]!);
+      const idx1 = toJavaName(match[2]!);
+      const from1 = match[3];
+      const by1 = match[4];
+      const limit1 = match[6];
+      const idx2 = toJavaName(match[7]!);
+      const from2 = match[8];
+      const by2 = match[9];
+      const limit2 = match[11];
+      const idx3 = toJavaName(match[12]!);
+      const from3 = match[13];
+      const by3 = match[14];
+      const limit3 = match[16];
+      return `for (int ${idx1} = ${from1}; ${idx1} <= ${limit1}; ${idx1} += ${by1}) {
+    for (int ${idx2} = ${from2}; ${idx2} <= ${limit2}; ${idx2} += ${by2}) {
+        for (int ${idx3} = ${from3}; ${idx3} <= ${limit3}; ${idx3} += ${by3}) {
+            ${para}();
+        }
+    }
+}`;
+    },
+    description: 'Perform varying with 2 AFTER clauses (3-level nested)',
+  },
+  // PERFORM VARYING with AFTER (nested loop) - 2 levels
+  {
+    pattern: /PERFORM\s+(\w[\w-]*)\s+VARYING\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)\s+AFTER\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)/gi,
+    transform: (match) => {
+      const para = toJavaName(match[1]!);
+      const idx1 = toJavaName(match[2]!);
+      const from1 = match[3];
+      const by1 = match[4];
+      const limit1 = match[6];
+      const idx2 = toJavaName(match[7]!);
+      const from2 = match[8];
+      const by2 = match[9];
+      const limit2 = match[11];
+      return `for (int ${idx1} = ${from1}; ${idx1} <= ${limit1}; ${idx1} += ${by1}) {
+    for (int ${idx2} = ${from2}; ${idx2} <= ${limit2}; ${idx2} += ${by2}) {
+        ${para}();
+    }
+}`;
+    },
+    description: 'Perform varying with AFTER (nested loop)',
+  },
+  // PERFORM VARYING (for loop) - single level
   {
     pattern: /PERFORM\s+(\w[\w-]*)\s+VARYING\s+(\w[\w-]*)\s+FROM\s+(\d+)\s+BY\s+(\d+)\s+UNTIL\s+(\w[\w-]*)\s*>\s*(\d+)/gi,
     transform: (match) => {

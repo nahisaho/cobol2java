@@ -892,3 +892,79 @@ describe('EXEC CICS transformations', () => {
     expect(result).toContain('NEXTPROG');
   });
 });
+
+describe('PERFORM VARYING multi-level transformations', () => {
+  it('transforms PERFORM VARYING with AFTER (2-level nested loop)', () => {
+    const result = transformStatement(
+      'PERFORM PROCESS-CELL VARYING WS-ROW FROM 1 BY 1 UNTIL WS-ROW > 10 AFTER WS-COL FROM 1 BY 1 UNTIL WS-COL > 5'
+    );
+    expect(result).toContain('wsRow');
+    expect(result).toContain('wsCol');
+    expect(result).toContain('for');
+    expect(result).toContain('processCell()');
+  });
+});
+
+describe('Communication Section transformations', () => {
+  it('transforms SEND message', () => {
+    const result = transformStatement('SEND MSG-QUEUE FROM WS-MESSAGE');
+    expect(result).toContain('messageQueue.send');
+    expect(result).toContain('wsMessage');
+  });
+
+  it('transforms RECEIVE message', () => {
+    const result = transformStatement('RECEIVE MSG-QUEUE INTO WS-DATA');
+    expect(result).toContain('messageQueue.receive');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms ACCEPT MESSAGE COUNT', () => {
+    const result = transformStatement('ACCEPT WS-COUNT MESSAGE COUNT');
+    expect(result).toContain('getMessageCount');
+    expect(result).toContain('wsCount');
+  });
+
+  it('transforms PURGE queue', () => {
+    const result = transformStatement('PURGE MSG-QUEUE');
+    expect(result).toContain('messageQueue.purge');
+  });
+});
+
+describe('File Status transformations', () => {
+  it('transforms FILE STATUS success check', () => {
+    const result = transformStatement('IF WS-FILE-STATUS = "00"');
+    expect(result).toContain('wsFileStatus.equals("00")');
+    expect(result).toContain('successful');
+  });
+
+  it('transforms FILE STATUS EOF check', () => {
+    const result = transformStatement('IF WS-FILE-STATUS = "10"');
+    expect(result).toContain('wsFileStatus.equals("10")');
+    expect(result).toContain('End of file');
+  });
+
+  it('transforms FILE STATUS not found check', () => {
+    const result = transformStatement('IF WS-FILE-STATUS = "23"');
+    expect(result).toContain('wsFileStatus.equals("23")');
+    expect(result).toContain('not found');
+  });
+
+  it('transforms FILE STATUS error check', () => {
+    const result = transformStatement('IF WS-FILE-STATUS NOT = "00"');
+    expect(result).toContain('!wsFileStatus.equals("00")');
+    expect(result).toContain('error');
+  });
+});
+
+describe('Debug Declaratives transformations', () => {
+  it('transforms USE FOR DEBUGGING', () => {
+    const result = transformStatement('USE FOR DEBUGGING ON MAIN-PARA');
+    expect(result).toContain('USE FOR DEBUGGING');
+    expect(result).toContain('debugMainPara');
+  });
+
+  it('transforms DEBUG-ITEM reference', () => {
+    const result = transformStatement('DISPLAY DEBUG-ITEM');
+    expect(result).toContain('debugContext.getDebugItem()');
+  });
+});
