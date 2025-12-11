@@ -1,8 +1,8 @@
 # Product Context
 
 **Project**: COBOL2Java
-**Last Updated**: 2025-12-11
-**Version**: 1.0
+**Last Updated**: 2025-12-12
+**Version**: 1.2
 
 ---
 

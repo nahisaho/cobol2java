@@ -1,8 +1,8 @@
 # Technology Stack
 
 **Project**: COBOL2Java
-**Last Updated**: 2025-12-11
-**Status**: Decided
+**Last Updated**: 2025-12-12
+**Status**: Implemented
 
 ---
 
@@ -106,6 +106,50 @@ packages/
 - ✅ 定量的な品質評価
 - ✅ リグレッションテストとして機能
 - ⚠️ 実運用COBOLとは異なる可能性
+
+---
+
+## Current Implementation Status (2025-12-12)
+
+### Transformation Engine
+
+| カテゴリ | 対応数 | 主要機能 |
+|----------|--------|----------|
+| Statement Rules | 130+ | MOVE, COMPUTE, IF, PERFORM, CALL, READ/WRITE等 |
+| Intrinsic Functions | 60+ | LENGTH, TRIM, NUMVAL, CURRENT-DATE, Math系等 |
+| Data Types | 15+ | PIC X, PIC 9, COMP, COMP-3, COMP-4/5等 |
+| Error Handlers | 8 | INVALID KEY, ON SIZE ERROR, ON EXCEPTION等 |
+
+### Parser Features
+
+| 機能 | ステータス | 説明 |
+|------|-----------|------|
+| IDENTIFICATION DIVISION | ✅ | PROGRAM-ID解析 |
+| ENVIRONMENT DIVISION | ✅ | SELECT...ASSIGN, FILE-CONTROL |
+| DATA DIVISION | ✅ | 01-88レベル, REDEFINES, OCCURS, INDEXED BY |
+| PROCEDURE DIVISION | ✅ | パラグラフ, ステートメント解析 |
+| File Definitions (FD) | ✅ | BLOCK, RECORD, LABEL RECORDS |
+| 88-level Conditions | ✅ | VALUE, THRU範囲 |
+
+### Test Coverage
+
+| テストファイル | テスト数 | 内容 |
+|---------------|---------|------|
+| transform.test.ts | 101 | 変換ルール全般 |
+| parser.test.ts | 11 | AST解析 |
+| generator.test.ts | 8 | Javaコード生成 |
+| converter.test.ts | 8 | 統合変換 |
+| **合計** | **128** | 全テストパス |
+
+### COBOL Syntax Coverage (Estimated)
+
+| Division | Coverage | Notes |
+|----------|----------|-------|
+| IDENTIFICATION | 14% | PROGRAM-ID対応 |
+| ENVIRONMENT | 15% | SELECT, FD対応 |
+| DATA | 50% | 主要句対応 |
+| PROCEDURE | 85% | 主要ステートメント対応 |
+| **Overall** | **~70%** | エンタープライズ向け拡張余地あり |
 
 ---
 

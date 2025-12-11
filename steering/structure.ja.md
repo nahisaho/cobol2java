@@ -1,8 +1,8 @@
 # Project Structure
 
 **Project**: COBOL2Java
-**Last Updated**: 2025-12-11
-**Version**: 1.0
+**Last Updated**: 2025-12-12
+**Version**: 1.2
 
 ---
 
@@ -116,29 +116,43 @@ Domain layer has NO dependencies
 
 ```
 COBOL2Java/
-├── lib/                  # Reusable libraries (Article I: Library-First)
-├── app/                  # Application code (Next.js, etc.)
-├── api/                  # API routes/controllers
-├── components/           # UI components
-├── services/             # Business logic services
-├── tests/                # Test suites
-├── docs/                 # Documentation
+├── packages/             # Monorepo packages
+│   ├── core/             # Core conversion library
+│   │   ├── src/
+│   │   │   ├── index.ts          # Public API exports
+│   │   │   ├── converter.ts      # Main conversion orchestrator
+│   │   │   ├── parser.ts         # COBOL AST parser
+│   │   │   ├── generator.ts      # Java code generator
+│   │   │   ├── errors.ts         # Error handling
+│   │   │   ├── transform/        # Transformation rules
+│   │   │   │   ├── index.ts
+│   │   │   │   └── rules.ts      # 130+ patterns, 60+ intrinsic functions
+│   │   │   └── llm/              # LLM integration
+│   │   │       ├── index.ts
+│   │   │       └── copilot.ts    # GitHub Copilot integration
+│   │   └── __tests__/            # Vitest tests (128 tests)
+│   ├── cli/              # CLI tool (future)
+│   └── web/              # Web interface (future)
 ├── storage/              # SDD artifacts
 │   ├── specs/            # Requirements, design, tasks
-│   ├── changes/          # Delta specifications (brownfield)
-│   └── validation/       # Validation reports
-├── steering/             # Project memory (this directory)
-│   ├── structure.md      # This file
-│   ├── tech.md           # Technology stack
-│   ├── product.md        # Product context
+│   ├── changes/          # Delta specifications
+│   └── features/         # Feature specifications
+├── steering/             # Project memory
+│   ├── structure.ja.md   # This file
+│   ├── tech.ja.md        # Technology stack
+│   ├── product.ja.md     # Product context
+│   ├── project.yml       # Project configuration
 │   └── rules/            # Constitutional governance
 ├── templates/            # Document templates
-└── [Other directories]
+├── package.json          # Root package.json
+├── pnpm-workspace.yaml   # pnpm workspace config
+├── tsconfig.json         # TypeScript config
+└── vitest.config.ts      # Test configuration
 ```
 
 ---
 
-## Library-First Pattern (Article I)
+## Monorepo Pattern (pnpm workspaces)
 
 All features begin as independent libraries in `lib/`.
 
