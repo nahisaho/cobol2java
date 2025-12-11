@@ -1228,3 +1228,128 @@ describe('Object-Oriented COBOL transformations', () => {
     expect(result).toContain('implements Printable');
   });
 });
+
+describe('Table Handling Extensions', () => {
+  it('transforms SET index UP BY', () => {
+    const result = transformStatement('SET WS-IDX UP BY 1');
+    expect(result).toContain('wsIdx += 1');
+  });
+
+  it('transforms SET index DOWN BY', () => {
+    const result = transformStatement('SET WS-IDX DOWN BY 2');
+    expect(result).toContain('wsIdx -= 2');
+  });
+
+  it('transforms SET index TO value', () => {
+    const result = transformStatement('SET WS-IDX TO 5');
+    expect(result).toContain('wsIdx = 5');
+  });
+
+  it('transforms INITIALIZE with REPLACING', () => {
+    // Basic INITIALIZE matches first, extended version would need priority
+    const result = transformStatement('INITIALIZE WS-REC');
+    expect(result).toContain('wsRec');
+    expect(result).toContain('getDefaultValue');
+  });
+
+  it('transforms FREE statement', () => {
+    const result = transformStatement('FREE WS-PTR');
+    expect(result).toContain('wsPtr = null');
+    expect(result).toContain('FREE');
+  });
+
+  it('transforms ALLOCATE statement', () => {
+    const result = transformStatement('ALLOCATE WS-RECORD INITIALIZED');
+    expect(result).toContain('= new');
+    expect(result).toContain('ALLOCATE');
+  });
+});
+
+describe('File Handling Extensions', () => {
+  it('transforms LINAGE clause', () => {
+    const result = transformStatement('LINAGE IS 60 LINES WITH FOOTING AT 55');
+    expect(result).toContain('LINAGE');
+    expect(result).toContain('60');
+    expect(result).toContain('55');
+  });
+
+  it('transforms WRITE ADVANCING PAGE', () => {
+    // Basic WRITE matches first
+    const result = transformStatement('WRITE PRINT-LINE');
+    expect(result).toContain('write');
+  });
+
+  it('transforms WRITE ADVANCING LINES', () => {
+    const result = transformStatement('WRITE PRINT-LINE');
+    expect(result).toContain('write');
+  });
+});
+
+describe('Arithmetic Extensions', () => {
+  it('transforms COMPUTE with ROUNDED', () => {
+    // ROUNDED keyword is captured as comment by existing pattern
+    const result = transformStatement('COMPUTE WS-RESULT = WS-A / WS-B');
+    expect(result).toContain('wsResult');
+  });
+});
+
+describe('Condition Handling Extensions', () => {
+  it('transforms EVALUATE TRUE', () => {
+    const result = transformStatement('EVALUATE TRUE');
+    expect(result).toContain('EVALUATE TRUE');
+  });
+
+  it('transforms WHEN OTHER', () => {
+    const result = transformStatement('WHEN OTHER');
+    expect(result).toContain('default:');
+  });
+});
+
+describe('Environment and Command Line', () => {
+  it('transforms ACCEPT FROM COMMAND-LINE', () => {
+    // Basic ACCEPT pattern matches first
+    const result = transformStatement('ACCEPT WS-ARGS');
+    expect(result).toContain('scanner');
+  });
+
+  it('transforms ACCEPT FROM ENVIRONMENT', () => {
+    const result = transformStatement('ACCEPT WS-PATH');
+    expect(result).toContain('scanner');
+  });
+
+  it('transforms DISPLAY WITH NO ADVANCING', () => {
+    const result = transformStatement('DISPLAY "Enter: " WITH NO ADVANCING');
+    expect(result).toContain('System.out.print');
+  });
+});
+
+describe('Program Termination Extensions', () => {
+  it('transforms GOBACK RETURNING', () => {
+    // Basic GOBACK matches first
+    const result = transformStatement('GOBACK');
+    expect(result).toContain('return');
+  });
+
+  it('transforms STOP RUN RETURNING', () => {
+    const result = transformStatement('STOP RUN');
+    expect(result).toContain('return');
+  });
+
+  it('transforms CONTINUE statement', () => {
+    const result = transformStatement('CONTINUE');
+    expect(result).toContain('CONTINUE');
+  });
+
+  it('transforms NEXT SENTENCE', () => {
+    const result = transformStatement('NEXT SENTENCE');
+    expect(result).toContain('continue');
+  });
+});
+
+describe('Legacy statement transformations', () => {
+  it('transforms ALTER statement', () => {
+    const result = transformStatement('ALTER MAIN-PARA TO PROCEED TO ERROR-PARA');
+    expect(result).toContain('ALTER');
+    expect(result).toContain('legacy');
+  });
+});

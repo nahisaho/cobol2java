@@ -2264,6 +2264,299 @@ ${outputProc}(); // OUTPUT PROCEDURE - retrieves from merge buffer via RETURN`;
     },
     description: 'Invoke method (OO)',
   },
+  
+  // ==== Table Handling Extensions ====
+  // SET index UP BY
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+UP\s+BY\s+(\d+)/gi,
+    transform: (match) => {
+      const idx = toJavaName(match[1]!);
+      const amount = match[2];
+      return `${idx} += ${amount};`;
+    },
+    description: 'Set index up',
+  },
+  // SET index DOWN BY
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+DOWN\s+BY\s+(\d+)/gi,
+    transform: (match) => {
+      const idx = toJavaName(match[1]!);
+      const amount = match[2];
+      return `${idx} -= ${amount};`;
+    },
+    description: 'Set index down',
+  },
+  // SET index TO index/literal
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+TO\s+(\w[\w-]*|\d+)/gi,
+    transform: (match) => {
+      const idx = toJavaName(match[1]!);
+      const val = /^\d+$/.test(match[2]!) ? match[2] : toJavaName(match[2]!);
+      return `${idx} = ${val};`;
+    },
+    description: 'Set index to value',
+  },
+  // INITIALIZE with REPLACING
+  {
+    pattern: /INITIALIZE\s+(\w[\w-]*)\s+REPLACING\s+(NUMERIC|ALPHANUMERIC|ALPHABETIC)\s+DATA\s+BY\s+(\w[\w-]*|\d+|"[^"]+")/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const type = match[2]!.toLowerCase();
+      const value = match[3]!.startsWith('"') ? match[3] : (/^\d+$/.test(match[3]!) ? match[3] : toJavaName(match[3]!));
+      return `${target}.initializeReplacing("${type}", ${value});`;
+    },
+    description: 'Initialize with replacing',
+  },
+  // FREE statement (memory deallocation)
+  {
+    pattern: /FREE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = null; // FREE - deallocate memory`;
+    },
+    description: 'Free memory',
+  },
+  // ALLOCATE statement (dynamic memory)
+  {
+    pattern: /ALLOCATE\s+(\w[\w-]*)(?:\s+INITIALIZED)?/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = new ${toClassName(match[1]!)}(); // ALLOCATE`;
+    },
+    description: 'Allocate memory',
+  },
+  
+  // ==== Locale and Encoding ====
+  // DISPLAY-1 (DBCS)
+  {
+    pattern: /DISPLAY-1/gi,
+    transform: () => 'String // DBCS (Double-Byte Character Set)',
+    description: 'DBCS display type',
+  },
+  // NATIONAL (UTF-16)
+  {
+    pattern: /PIC\s+N+(?:\((\d+)\))?/gi,
+    transform: (match) => {
+      const len = match[1] || '1';
+      return `String // NATIONAL (UTF-16) length ${len}`;
+    },
+    description: 'National character type',
+  },
+  // NATIONAL-EDITED
+  {
+    pattern: /PIC\s+N+E+/gi,
+    transform: () => 'String // NATIONAL-EDITED',
+    description: 'National edited type',
+  },
+  
+  // ==== Additional File Handling ====
+  // LINAGE clause
+  {
+    pattern: /LINAGE\s+IS\s+(\d+)\s+LINES(?:\s+WITH\s+FOOTING\s+AT\s+(\d+))?(?:\s+LINES\s+AT\s+TOP\s+(\d+))?(?:\s+LINES\s+AT\s+BOTTOM\s+(\d+))?/gi,
+    transform: (match) => {
+      const lines = match[1];
+      const footing = match[2] || 'N/A';
+      const top = match[3] || '0';
+      const bottom = match[4] || '0';
+      return `// LINAGE: ${lines} lines, footing at ${footing}, top ${top}, bottom ${bottom}`;
+    },
+    description: 'Linage page control',
+  },
+  // WRITE ADVANCING PAGE
+  {
+    pattern: /WRITE\s+(\w[\w-]*)\s+(?:AFTER|BEFORE)\s+ADVANCING\s+PAGE/gi,
+    transform: (match) => {
+      const rec = toJavaName(match[1]!);
+      return `writer.write("\\f"); writer.write(${rec}); // ADVANCING PAGE`;
+    },
+    description: 'Write with page advance',
+  },
+  // WRITE ADVANCING n LINES
+  {
+    pattern: /WRITE\s+(\w[\w-]*)\s+(?:AFTER|BEFORE)\s+ADVANCING\s+(\d+)\s+LINES?/gi,
+    transform: (match) => {
+      const rec = toJavaName(match[1]!);
+      const lines = match[2];
+      return `for (int i = 0; i < ${lines}; i++) writer.write("\\n"); writer.write(${rec});`;
+    },
+    description: 'Write with line advance',
+  },
+  
+  // ==== Arithmetic Extensions ====
+  // COMPUTE with ROUNDED
+  {
+    pattern: /COMPUTE\s+(\w[\w-]*)\s+ROUNDED\s*=\s*(.+)/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const expr = transformExpression(match[2]!);
+      return `${target} = (int) Math.round(${expr});`;
+    },
+    description: 'Compute with rounding',
+  },
+  // ADD/SUBTRACT/MULTIPLY/DIVIDE with SIZE ERROR
+  {
+    pattern: /ADD\s+(.+?)\s+TO\s+(\w[\w-]*)\s+ON\s+SIZE\s+ERROR\s+(.+)/gi,
+    transform: (match) => {
+      const value = transformExpression(match[1]!);
+      const target = toJavaName(match[2]!);
+      const errorHandler = match[3];
+      return `try { ${target} += ${value}; if (${target} > Integer.MAX_VALUE) throw new ArithmeticException(); } catch (ArithmeticException e) { /* ${errorHandler} */ }`;
+    },
+    description: 'Add with size error',
+  },
+  
+  // ==== Pointer Operations ====
+  // POINTER type
+  {
+    pattern: /USAGE\s+(?:IS\s+)?POINTER/gi,
+    transform: () => 'Object // POINTER type',
+    description: 'Pointer usage',
+  },
+  // FUNCTION-POINTER type
+  {
+    pattern: /USAGE\s+(?:IS\s+)?FUNCTION-POINTER/gi,
+    transform: () => 'java.lang.reflect.Method // FUNCTION-POINTER',
+    description: 'Function pointer usage',
+  },
+  // PROCEDURE-POINTER type
+  {
+    pattern: /USAGE\s+(?:IS\s+)?PROCEDURE-POINTER/gi,
+    transform: () => 'Runnable // PROCEDURE-POINTER',
+    description: 'Procedure pointer usage',
+  },
+  
+  // ==== Condition Handling Extensions ====
+  // EVALUATE TRUE/FALSE
+  {
+    pattern: /EVALUATE\s+TRUE/gi,
+    transform: () => '// EVALUATE TRUE\nswitch (true) {',
+    description: 'Evaluate true',
+  },
+  {
+    pattern: /EVALUATE\s+FALSE/gi,
+    transform: () => '// EVALUATE FALSE\nswitch (false) {',
+    description: 'Evaluate false',
+  },
+  // WHEN OTHER (default case)
+  {
+    pattern: /WHEN\s+OTHER/gi,
+    transform: () => 'default:',
+    description: 'When other (default)',
+  },
+  // ALSO in EVALUATE
+  {
+    pattern: /WHEN\s+(\w[\w-]*|\d+|"[^"]+")\s+ALSO\s+(\w[\w-]*|\d+|"[^"]+")/gi,
+    transform: (match) => {
+      const val1 = match[1]!.startsWith('"') ? match[1] : (/^\d+$/.test(match[1]!) ? match[1] : toJavaName(match[1]!));
+      const val2 = match[2]!.startsWith('"') ? match[2] : (/^\d+$/.test(match[2]!) ? match[2] : toJavaName(match[2]!));
+      return `case ${val1}: if (${val2}) { // ALSO condition`;
+    },
+    description: 'When with also',
+  },
+  
+  // ==== String Handling Extensions ====
+  // STRING with POINTER
+  {
+    pattern: /STRING\s+(.+?)\s+DELIMITED\s+BY\s+(\w[\w-]*|SIZE|"[^"]+")\s+INTO\s+(\w[\w-]*)\s+WITH\s+POINTER\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = match[1]!.split(/\s+/).map(s => s.startsWith('"') ? s : toJavaName(s)).join(' + ');
+      const target = toJavaName(match[3]!);
+      const pointer = toJavaName(match[4]!);
+      return `${target} = ${target}.substring(0, ${pointer} - 1) + (${source}).split(String.valueOf(${match[2] === 'SIZE' ? '""' : match[2]}))[0] + ${target}.substring(${pointer}); ${pointer} += (${source}).length();`;
+    },
+    description: 'String with pointer',
+  },
+  // UNSTRING with TALLYING
+  {
+    pattern: /UNSTRING\s+(\w[\w-]*)\s+DELIMITED\s+BY\s+(\w[\w-]*|"[^"]+")\s+INTO\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const delim = match[2]!.startsWith('"') ? match[2] : toJavaName(match[2]!);
+      const target = toJavaName(match[3]!);
+      const counter = toJavaName(match[4]!);
+      return `String[] _parts = ${source}.split(${delim}); ${target} = _parts[0]; ${counter} = _parts.length;`;
+    },
+    description: 'Unstring with tallying',
+  },
+  
+  // ==== Miscellaneous Extensions ====
+  // ACCEPT FROM COMMAND-LINE
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+FROM\s+COMMAND-LINE/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = String.join(" ", args); // ACCEPT FROM COMMAND-LINE`;
+    },
+    description: 'Accept from command line',
+  },
+  // ACCEPT FROM ENVIRONMENT-NAME
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+FROM\s+ENVIRONMENT\s+(\w[\w-]*|"[^"]+")/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      const envVar = match[2]!.startsWith('"') ? match[2]!.slice(1, -1) : toJavaName(match[2]!);
+      return `${target} = System.getenv("${envVar}");`;
+    },
+    description: 'Accept from environment',
+  },
+  // DISPLAY UPON ENVIRONMENT-NAME
+  {
+    pattern: /DISPLAY\s+(\w[\w-]*)\s+UPON\s+ENVIRONMENT-NAME/gi,
+    transform: (match) => {
+      const value = toJavaName(match[1]!);
+      return `// DISPLAY UPON ENVIRONMENT-NAME: ${value} (set at runtime)`;
+    },
+    description: 'Display upon environment',
+  },
+  // DISPLAY WITH NO ADVANCING
+  {
+    pattern: /DISPLAY\s+(.+?)\s+WITH\s+NO\s+ADVANCING/gi,
+    transform: (match) => {
+      const val = match[1]!.startsWith('"') ? match[1] : toJavaName(match[1]!);
+      return `System.out.print(${val});`;
+    },
+    description: 'Display without newline',
+  },
+  // GOBACK with status
+  {
+    pattern: /GOBACK\s+RETURNING\s+(\w[\w-]*|\d+)/gi,
+    transform: (match) => {
+      const status = /^\d+$/.test(match[1]!) ? match[1] : toJavaName(match[1]!);
+      return `System.exit(${status});`;
+    },
+    description: 'Goback with return code',
+  },
+  // STOP RUN with status
+  {
+    pattern: /STOP\s+RUN\s+RETURNING\s+(\w[\w-]*|\d+)/gi,
+    transform: (match) => {
+      const status = /^\d+$/.test(match[1]!) ? match[1] : toJavaName(match[1]!);
+      return `System.exit(${status});`;
+    },
+    description: 'Stop run with return code',
+  },
+  // CONTINUE statement
+  {
+    pattern: /CONTINUE/gi,
+    transform: () => '// CONTINUE - no operation',
+    description: 'Continue statement',
+  },
+  // NEXT SENTENCE
+  {
+    pattern: /NEXT\s+SENTENCE/gi,
+    transform: () => 'continue; // NEXT SENTENCE',
+    description: 'Next sentence',
+  },
+  // ALTER statement (legacy)
+  {
+    pattern: /ALTER\s+(\w[\w-]*)\s+TO\s+(?:PROCEED\s+TO\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const para = toJavaName(match[1]!);
+      const target = toJavaName(match[2]!);
+      return `// ALTER ${para} TO ${target} - legacy statement, use direct call instead`;
+    },
+    description: 'Alter statement (legacy)',
+  },
 ];
 
 /**
