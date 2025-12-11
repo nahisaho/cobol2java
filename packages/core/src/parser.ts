@@ -1,0 +1,325 @@
+/**
+ * COBOL Parser
+ * 
+ * Parses COBOL source code into an AST
+ */
+
+import { type ErrorInfo, createError, ErrorSeverity } from './errors.js';
+
+/**
+ * COBOL AST node types
+ */
+export type CobolNodeType =
+  | 'program'
+  | 'identification_division'
+  | 'environment_division'
+  | 'data_division'
+  | 'procedure_division'
+  | 'section'
+  | 'paragraph'
+  | 'statement'
+  | 'data_item'
+  | 'file_description'
+  | 'literal'
+  | 'identifier';
+
+/**
+ * Data item definition
+ */
+export interface DataItem {
+  level: number;
+  name: string;
+  pic?: string;
+  value?: string;
+  occurs?: number;
+  usage?: string;
+}
+
+/**
+ * Paragraph definition
+ */
+export interface Paragraph {
+  name: string;
+  statements: string[];
+  startLine: number;
+}
+
+/**
+ * COBOL AST node
+ */
+export interface CobolNode {
+  type: CobolNodeType;
+  name?: string;
+  value?: string;
+  children?: CobolNode[];
+  startLine?: number;
+  endLine?: number;
+  raw?: string;
+}
+
+/**
+ * COBOL AST root
+ */
+export interface CobolAst {
+  type: 'program';
+  programName?: string;
+  identificationDivision?: CobolNode;
+  environmentDivision?: CobolNode;
+  dataDivision?: CobolNode;
+  procedureDivision?: CobolNode;
+  dataItems: DataItem[];
+  paragraphs: Paragraph[];
+  errors: ErrorInfo[];
+  raw: string;
+}
+
+/**
+ * Parse result
+ */
+export interface ParseResult {
+  ast: CobolAst;
+  errors: ErrorInfo[];
+}
+
+/**
+ * COBOL Parser
+ * 
+ * @remarks
+ * Enhanced implementation with data division and procedure division parsing.
+ */
+export class CobolParser {
+  /**
+   * Parse COBOL source code
+   * 
+   * @param source - COBOL source code
+   * @returns COBOL AST
+   */
+  parse(source: string): CobolAst {
+    const errors: ErrorInfo[] = [];
+    const lines = source.split('\n');
+    const dataItems: DataItem[] = [];
+    const paragraphs: Paragraph[] = [];
+    
+    let programName: string | undefined;
+    let hasIdentification = false;
+    let hasProcedure = false;
+    let currentSection: 'identification' | 'environment' | 'data' | 'procedure' | null = null;
+    let currentParagraph: Paragraph | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const rawLine = lines[i] ?? '';
+      const line = this.cleanLine(rawLine);
+      
+      // Skip comments and empty lines
+      if (line.startsWith('*') || line === '') {
+        continue;
+      }
+
+      const upperLine = line.toUpperCase();
+
+      // Detect divisions
+      if (upperLine.includes('IDENTIFICATION DIVISION')) {
+        hasIdentification = true;
+        currentSection = 'identification';
+        continue;
+      }
+      if (upperLine.includes('ENVIRONMENT DIVISION')) {
+        currentSection = 'environment';
+        continue;
+      }
+      if (upperLine.includes('DATA DIVISION')) {
+        currentSection = 'data';
+        continue;
+      }
+      if (upperLine.includes('PROCEDURE DIVISION')) {
+        hasProcedure = true;
+        currentSection = 'procedure';
+        continue;
+      }
+
+      // Parse based on current section
+      if (currentSection === 'identification') {
+        const programIdMatch = upperLine.match(/PROGRAM-ID\.\s*(\w[\w-]*)/);
+        if (programIdMatch) {
+          programName = programIdMatch[1];
+        }
+      }
+
+      if (currentSection === 'data') {
+        const dataItem = this.parseDataItem(line);
+        if (dataItem) {
+          dataItems.push(dataItem);
+        }
+      }
+
+      if (currentSection === 'procedure') {
+        // Check for END-* statements first (they are not paragraphs)
+        if (upperLine.match(/^END-(?:PERFORM|IF|EVALUATE|READ|WRITE)/)) {
+          if (currentParagraph && line.trim()) {
+            currentParagraph.statements.push(line.trim());
+          }
+          continue;
+        }
+        
+        // Check for paragraph (line ending with period, no keywords)
+        const paragraphMatch = upperLine.match(/^(\w[\w-]*)\s*\.?\s*$/);
+        if (paragraphMatch && !this.isKeyword(paragraphMatch[1]!)) {
+          if (currentParagraph) {
+            paragraphs.push(currentParagraph);
+          }
+          currentParagraph = {
+            name: paragraphMatch[1]!,
+            statements: [],
+            startLine: i + 1,
+          };
+        } else if (currentParagraph && line.trim()) {
+          // Add statement to current paragraph
+          // Join continuation lines (COBOL statements end with period)
+          const trimmedLine = line.trim();
+          const lastStatement = currentParagraph.statements.length > 0
+            ? currentParagraph.statements[currentParagraph.statements.length - 1]
+            : null;
+          
+          // Check if this line starts with a COBOL verb (new statement)
+          const isNewStatement = upperLine.match(/^(MOVE|ADD|SUBTRACT|MULTIPLY|DIVIDE|COMPUTE|IF|ELSE|PERFORM|DISPLAY|ACCEPT|READ|WRITE|OPEN|CLOSE|STOP|GO|EXIT|CALL|EVALUATE|STRING|UNSTRING|INITIALIZE|SEARCH|INSPECT|SET)/);
+          
+          // If last statement doesn't end with period and this isn't a new statement,
+          // join with the previous line
+          if (lastStatement && !lastStatement.endsWith('.') && !isNewStatement) {
+            currentParagraph.statements[currentParagraph.statements.length - 1] = 
+              lastStatement + ' ' + trimmedLine;
+          } else {
+            currentParagraph.statements.push(trimmedLine);
+          }
+        }
+      }
+    }
+
+    // Add last paragraph
+    if (currentParagraph) {
+      paragraphs.push(currentParagraph);
+    }
+
+    // Validate basic structure
+    if (!hasIdentification) {
+      errors.push(
+        createError('CVT001', 'Missing IDENTIFICATION DIVISION', {
+          severity: ErrorSeverity.WARNING,
+          line: 1,
+          suggestion: 'Add IDENTIFICATION DIVISION at the beginning of the program',
+        })
+      );
+    }
+
+    if (!hasProcedure) {
+      errors.push(
+        createError('CVT002', 'Missing PROCEDURE DIVISION', {
+          severity: ErrorSeverity.WARNING,
+          line: 1,
+          suggestion: 'Add PROCEDURE DIVISION for executable code',
+        })
+      );
+    }
+
+    return {
+      type: 'program',
+      programName,
+      dataItems,
+      paragraphs,
+      errors,
+      raw: source,
+    };
+  }
+
+  /**
+   * Clean a COBOL source line
+   */
+  private cleanLine(line: string): string {
+    // Remove sequence number area (columns 1-6) if present
+    if (line.length > 6 && /^\d{6}/.test(line)) {
+      line = line.substring(6);
+    }
+    // Remove indicator area (column 7) comments
+    if (line.length > 0 && line[0] === '*') {
+      return '';
+    }
+    return line.trim();
+  }
+
+  /**
+   * Parse a data item definition
+   */
+  private parseDataItem(line: string): DataItem | null {
+    const upperLine = line.toUpperCase();
+    
+    // Try full pattern with PIC and VALUE
+    // Pattern: 01 WS-NAME PIC X(10) VALUE "TEST".
+    // Allow decimal points in VALUE by using a different approach
+    const fullMatch = upperLine.match(
+      /^(\d{1,2})\s+(\w[\w-]*)\s+PIC(?:TURE)?\s+(\S+)\s+VALUE\s+(.+?)\.?\s*$/i
+    );
+    
+    if (fullMatch) {
+      const dataItem: DataItem = {
+        level: parseInt(fullMatch[1]!, 10),
+        name: fullMatch[2]!,
+        pic: fullMatch[3]!,
+      };
+      
+      // Clean up value - remove trailing period and quotes
+      let value = fullMatch[4]!.trim();
+      if (value.endsWith('.')) {
+        value = value.slice(0, -1);
+      }
+      value = value.replace(/^["']|["']$/g, '');
+      dataItem.value = value;
+      
+      // Check for OCCURS
+      const occursMatch = upperLine.match(/OCCURS\s+(\d+)/i);
+      if (occursMatch) {
+        dataItem.occurs = parseInt(occursMatch[1]!, 10);
+      }
+      
+      return dataItem;
+    }
+    
+    // Try pattern with PIC but no VALUE
+    const picOnlyMatch = upperLine.match(
+      /^(\d{1,2})\s+(\w[\w-]*)\s+PIC(?:TURE)?\s+(\S+?)\.?\s*$/i
+    );
+    
+    if (picOnlyMatch) {
+      return {
+        level: parseInt(picOnlyMatch[1]!, 10),
+        name: picOnlyMatch[2]!,
+        pic: picOnlyMatch[3]!,
+      };
+    }
+    
+    // Try simpler pattern: 01 FILLER or 01 WS-GROUP
+    const simpleMatch = upperLine.match(/^(\d{1,2})\s+(\w[\w-]*)\s*\.?$/);
+    if (simpleMatch) {
+      return {
+        level: parseInt(simpleMatch[1]!, 10),
+        name: simpleMatch[2]!,
+      };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Check if a word is a COBOL keyword
+   */
+  private isKeyword(word: string): boolean {
+    const keywords = [
+      'IDENTIFICATION', 'ENVIRONMENT', 'DATA', 'PROCEDURE',
+      'DIVISION', 'SECTION', 'WORKING-STORAGE', 'LINKAGE',
+      'FILE', 'INPUT-OUTPUT', 'FILE-CONTROL', 'SELECT',
+      'IF', 'ELSE', 'END-IF', 'PERFORM', 'MOVE', 'ADD',
+      'SUBTRACT', 'MULTIPLY', 'DIVIDE', 'COMPUTE',
+      'DISPLAY', 'ACCEPT', 'STOP', 'GOBACK',
+    ];
+    return keywords.includes(word.toUpperCase());
+  }
+}

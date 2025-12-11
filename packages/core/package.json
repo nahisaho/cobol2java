@@ -1,0 +1,29 @@
+{
+  "name": "@cobol2java/core",
+  "version": "0.1.0",
+  "description": "Core COBOL to Java conversion library",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "peerDependencies": {},
+  "keywords": ["cobol", "java", "converter", "transpiler"],
+  "license": "MIT"
+}
