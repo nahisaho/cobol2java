@@ -22,9 +22,14 @@ export const convertCommand = new Command('convert')
   .option('--generate-tests', 'Generate unit tests')
   .option('--strict', 'Fail on warnings')
   .option('--verbose', 'Verbose output')
+  .option('--format <format>', 'Output format: text or json', 'text')
   .action(async (input: string, options) => {
+    const isJson = options.format === 'json';
+    
     try {
-      console.log(`Converting ${input}...`);
+      if (!isJson) {
+        console.log(`Converting ${input}...`);
+      }
 
       // Read COBOL source
       const cobolSource = await readFile(input, 'utf-8');
@@ -54,26 +59,40 @@ export const convertCommand = new Command('convert')
       // Write output
       await writeFile(outputPath, result.java, 'utf-8');
 
-      console.log(`✓ Generated ${outputPath}`);
+      // JSON output format
+      if (isJson) {
+        const jsonOutput = {
+          success: result.errors.length === 0,
+          input,
+          output: outputPath,
+          className: result.className,
+          errors: result.errors,
+          warnings: result.warnings,
+          metadata: result.metadata,
+        };
+        console.log(JSON.stringify(jsonOutput, null, 2));
+      } else {
+        console.log(`✓ Generated ${outputPath}`);
 
-      // Report errors/warnings
-      if (result.errors.length > 0) {
-        console.log('\nErrors:');
-        result.errors.forEach(err => console.log(`  ${formatError(err)}`));
-      }
+        // Report errors/warnings
+        if (result.errors.length > 0) {
+          console.log('\nErrors:');
+          result.errors.forEach(err => console.log(`  ${formatError(err)}`));
+        }
 
-      if (result.warnings.length > 0) {
-        console.log('\nWarnings:');
-        result.warnings.forEach(warn => console.log(`  ${formatError(warn)}`));
-      }
+        if (result.warnings.length > 0) {
+          console.log('\nWarnings:');
+          result.warnings.forEach(warn => console.log(`  ${formatError(warn)}`));
+        }
 
-      // Report metadata
-      if (options.verbose) {
-        console.log('\nMetadata:');
-        console.log(`  Program: ${result.metadata.programName}`);
-        console.log(`  Lines: ${result.metadata.linesConverted}`);
-        console.log(`  Duration: ${result.metadata.durationMs}ms`);
-        console.log(`  LLM: ${result.metadata.llmProvider}`);
+        // Report metadata
+        if (options.verbose) {
+          console.log('\nMetadata:');
+          console.log(`  Program: ${result.metadata.programName}`);
+          console.log(`  Lines: ${result.metadata.linesConverted}`);
+          console.log(`  Duration: ${result.metadata.durationMs}ms`);
+          console.log(`  LLM: ${result.metadata.llmProvider}`);
+        }
       }
 
       // Exit with error code if there were errors
@@ -81,7 +100,15 @@ export const convertCommand = new Command('convert')
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${error instanceof Error ? error.message : error}`);
+      if (isJson) {
+        console.log(JSON.stringify({
+          success: false,
+          input,
+          error: error instanceof Error ? error.message : String(error),
+        }, null, 2));
+      } else {
+        console.error(`Error: ${error instanceof Error ? error.message : error}`);
+      }
       process.exit(1);
     }
   });

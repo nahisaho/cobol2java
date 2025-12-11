@@ -1,5 +1,30 @@
 /**
  * Error types and utilities for COBOL to Java conversion
+ * 
+ * Error Code System:
+ * - CVT001-099: Conversion structure errors
+ *   - CVT001: Missing IDENTIFICATION DIVISION
+ *   - CVT002: Missing PROCEDURE DIVISION
+ *   - CVT003: Invalid program name
+ * 
+ * - CVT100-199: Data division errors
+ *   - CVT101: Invalid PIC clause
+ *   - CVT102: Unsupported data type
+ *   - CVT103: Invalid OCCURS clause
+ * 
+ * - CVT200-299: Procedure division errors  
+ *   - CVT201: Unknown COBOL verb
+ *   - CVT202: Invalid statement syntax
+ *   - CVT203: Undefined paragraph reference
+ * 
+ * - CVT300-399: LLM errors
+ *   - CVT301: LLM connection failed
+ *   - CVT302: LLM response invalid
+ *   - CVT303: LLM rate limited
+ * 
+ * - CVT400-499: Output errors
+ *   - CVT401: Invalid Java syntax generated
+ *   - CVT402: File write failed
  */
 
 /**
