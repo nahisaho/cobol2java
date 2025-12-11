@@ -181,7 +181,7 @@ export class CobolParser {
             : null;
           
           // Check if this line starts with a COBOL verb (new statement)
-          const isNewStatement = upperLine.match(/^(MOVE|ADD|SUBTRACT|MULTIPLY|DIVIDE|COMPUTE|IF|ELSE|PERFORM|DISPLAY|ACCEPT|READ|WRITE|OPEN|CLOSE|STOP|GO|EXIT|CALL|EVALUATE|STRING|UNSTRING|INITIALIZE|SEARCH|INSPECT|SET)/);
+          const isNewStatement = upperLine.match(/^(MOVE|ADD|SUBTRACT|MULTIPLY|DIVIDE|COMPUTE|IF|ELSE|PERFORM|DISPLAY|ACCEPT|READ|WRITE|OPEN|CLOSE|STOP|GO|EXIT|CALL|EVALUATE|WHEN|END-EVALUATE|STRING|UNSTRING|INITIALIZE|SEARCH|INSPECT|SET|CONTINUE)/);
           
           // If last statement doesn't end with period and this isn't a new statement,
           // join with the previous line

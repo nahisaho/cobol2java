@@ -341,6 +341,128 @@ export const STATEMENT_RULES: StatementRule[] = [
     transform: (match) => `${toJavaName(match[1]!)}();`,
     description: 'Perform paragraph',
   },
+  // EVALUATE (switch statement)
+  {
+    pattern: /EVALUATE\s+(.+)/gi,
+    transform: (match) => {
+      const expr = transformExpression(match[1]!.replace(/\s+TRUE\s*$/i, '').trim());
+      // Check if evaluating TRUE (condition-based switch)
+      if (match[1]!.trim().toUpperCase() === 'TRUE') {
+        return `// EVALUATE TRUE (use if/else chain)`;
+      }
+      return `switch (${expr}) {`;
+    },
+    description: 'Evaluate statement (switch)',
+  },
+  {
+    pattern: /WHEN\s+"([^"]+)"/gi,
+    transform: (match) => `case "${match[1]}":`,
+    description: 'When string literal',
+  },
+  {
+    pattern: /WHEN\s+(\d+)/gi,
+    transform: (match) => `case ${match[1]}:`,
+    description: 'When numeric literal',
+  },
+  {
+    pattern: /WHEN\s+OTHER/gi,
+    transform: () => 'default:',
+    description: 'When other (default)',
+  },
+  {
+    pattern: /END-EVALUATE/gi,
+    transform: () => '}',
+    description: 'End evaluate',
+  },
+  // STRING concatenation
+  {
+    pattern: /STRING\s+(.+?)\s+DELIMITED\s+(?:BY\s+)?(?:SIZE|SPACE|"[^"]*")\s+INTO\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const parts = match[1]!.split(/\s+/).filter(p => p && !p.match(/^DELIMITED$/i));
+      const target = toJavaName(match[2]!);
+      const javaExprs = parts.map(p => {
+        if (p.startsWith('"') && p.endsWith('"')) return p;
+        return toJavaName(p);
+      });
+      return `${target} = ${javaExprs.join(' + ')};`;
+    },
+    description: 'String concatenation',
+  },
+  // INITIALIZE statement
+  {
+    pattern: /INITIALIZE\s+(\w[\w-]*)/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = getDefaultValue(${toJavaName(match[1]!)}); // TODO: Initialize to default`,
+    description: 'Initialize variable',
+  },
+  // ACCEPT statement (input)
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+FROM\s+(?:CONSOLE|COMMAND-LINE)/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = scanner.nextLine();`,
+    description: 'Accept from console',
+  },
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = scanner.nextLine();`,
+    description: 'Accept input',
+  },
+  // EXIT statement
+  {
+    pattern: /EXIT\s+PARAGRAPH/gi,
+    transform: () => 'return; // EXIT PARAGRAPH',
+    description: 'Exit paragraph',
+  },
+  {
+    pattern: /EXIT\s+SECTION/gi,
+    transform: () => 'return; // EXIT SECTION',
+    description: 'Exit section',
+  },
+  {
+    pattern: /EXIT\s+PROGRAM/gi,
+    transform: () => 'return;',
+    description: 'Exit program',
+  },
+  // CONTINUE (no-op)
+  {
+    pattern: /CONTINUE\s*$/gi,
+    transform: () => '// CONTINUE',
+    description: 'Continue (no operation)',
+  },
+  // SET statement
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+TO\s+TRUE/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = true;`,
+    description: 'Set to true',
+  },
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+TO\s+FALSE/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = false;`,
+    description: 'Set to false',
+  },
+  {
+    pattern: /SET\s+(\w[\w-]*)\s+TO\s+(\d+)/gi,
+    transform: (match) => `${toJavaName(match[1]!)} = ${match[2]};`,
+    description: 'Set to number',
+  },
+  // INSPECT TALLYING (count occurrences)
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+TALLYING\s+(\w[\w-]*)\s+FOR\s+ALL\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const source = toJavaName(match[1]!);
+      const counter = toJavaName(match[2]!);
+      const searchStr = match[3];
+      return `${counter} = ${source}.length() - ${source}.replace("${searchStr}", "").length();`;
+    },
+    description: 'Inspect tallying all occurrences',
+  },
+  // INSPECT REPLACING
+  {
+    pattern: /INSPECT\s+(\w[\w-]*)\s+REPLACING\s+ALL\s+"([^"]+)"\s+BY\s+"([^"]+)"/gi,
+    transform: (match) => {
+      const target = toJavaName(match[1]!);
+      return `${target} = ${target}.replace("${match[2]}", "${match[3]}");`;
+    },
+    description: 'Inspect replacing all',
+  },
 ];
 
 /**

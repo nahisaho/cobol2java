@@ -1,5 +1,5 @@
 {
-  "name": "@cobol2java/vscode",
+  "name": "cobol2java-vscode",
   "displayName": "COBOL2Java",
   "description": "Convert COBOL source code to Java with GitHub Copilot LLM assistance",
   "version": "0.1.0",

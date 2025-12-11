@@ -162,6 +162,65 @@ describe('transformStatement', () => {
       );
     });
   });
+
+  describe('EVALUATE (switch)', () => {
+    it('transforms EVALUATE to switch', () => {
+      expect(transformStatement('EVALUATE WS-STATUS')).toBe('switch (wsStatus) {');
+    });
+
+    it('transforms WHEN string', () => {
+      expect(transformStatement('WHEN "ACTIVE"')).toBe('case "ACTIVE":');
+    });
+
+    it('transforms WHEN number', () => {
+      expect(transformStatement('WHEN 1')).toBe('case 1:');
+    });
+
+    it('transforms WHEN OTHER', () => {
+      expect(transformStatement('WHEN OTHER')).toBe('default:');
+    });
+
+    it('transforms END-EVALUATE', () => {
+      expect(transformStatement('END-EVALUATE')).toBe('}');
+    });
+  });
+
+  describe('SET statement', () => {
+    it('transforms SET to TRUE', () => {
+      expect(transformStatement('SET WS-FLAG TO TRUE')).toBe('wsFlag = true;');
+    });
+
+    it('transforms SET to FALSE', () => {
+      expect(transformStatement('SET WS-FLAG TO FALSE')).toBe('wsFlag = false;');
+    });
+
+    it('transforms SET to number', () => {
+      expect(transformStatement('SET WS-INDEX TO 1')).toBe('wsIndex = 1;');
+    });
+  });
+
+  describe('EXIT statements', () => {
+    it('transforms EXIT PROGRAM', () => {
+      expect(transformStatement('EXIT PROGRAM')).toBe('return;');
+    });
+
+    it('transforms EXIT PARAGRAPH', () => {
+      expect(transformStatement('EXIT PARAGRAPH')).toBe('return; // EXIT PARAGRAPH');
+    });
+  });
+
+  describe('CONTINUE', () => {
+    it('transforms CONTINUE', () => {
+      expect(transformStatement('CONTINUE')).toBe('// CONTINUE');
+    });
+  });
+
+  describe('INSPECT', () => {
+    it('transforms INSPECT REPLACING', () => {
+      const result = transformStatement('INSPECT WS-TEXT REPLACING ALL "A" BY "B"');
+      expect(result).toBe('wsText = wsText.replace("A", "B");');
+    });
+  });
 });
 
 describe('transformExpression', () => {

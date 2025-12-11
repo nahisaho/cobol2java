@@ -259,13 +259,34 @@ export class JavaGenerator {
   private generateStatements(statements: string[], baseIndent: number = 0): string[] {
     const lines: string[] = [];
     let currentIndent = baseIndent;
+    let inSwitch = false;
+    let inCase = false;
 
     for (const stmt of statements) {
       const transformed = transformStatement(stmt);
       if (transformed) {
         // Check if this closes a block (decreases indent before adding)
         if (transformed === '}') {
+          // If we were in a case, add break before closing switch
+          if (inCase) {
+            const breakIndent = '    '.repeat(currentIndent);
+            lines.push(`${breakIndent}break;`);
+            inCase = false;
+          }
+          if (inSwitch) {
+            inSwitch = false;
+          }
           currentIndent = Math.max(0, currentIndent - 1);
+        }
+        
+        // Handle case statements - add break before next case if needed
+        if (transformed.startsWith('case ') || transformed === 'default:') {
+          // Add break to previous case if we were in one
+          if (inCase) {
+            const breakIndent = '    '.repeat(currentIndent);
+            lines.push(`${breakIndent}break;`);
+          }
+          inCase = true;
         }
         
         const indent = '    '.repeat(currentIndent);
@@ -274,6 +295,19 @@ export class JavaGenerator {
         // Check if this opens a block (increases indent after adding)
         if (transformed.endsWith('{')) {
           currentIndent++;
+          if (transformed.startsWith('switch')) {
+            inSwitch = true;
+          }
+        }
+        
+        // Increase indent after case/default for the body
+        if (transformed.startsWith('case ') || transformed === 'default:') {
+          currentIndent++;
+        }
+        
+        // Statement inside case - decrease indent after
+        if (inCase && !transformed.startsWith('case') && transformed !== 'default:' && !transformed.endsWith('{') && transformed !== '}') {
+          currentIndent = Math.max(0, currentIndent - 1);
         }
       } else {
         // Add as comment if not transformable
