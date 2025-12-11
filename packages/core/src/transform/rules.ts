@@ -235,7 +235,271 @@ export interface StatementRule {
  * COBOL statement to Java statement mappings
  */
 export const STATEMENT_RULES: StatementRule[] = [
-  // Error/exception handling clauses - must be at top to match before DISPLAY
+  // ==== MOST SPECIFIC PATTERNS FIRST ====
+  
+  // Screen Section patterns (must be before simple DISPLAY/ACCEPT)
+  {
+    pattern: /DISPLAY\s+(\w[\w-]*)\s+(?:AT\s+)?LINE\s+(\d+)\s+(?:COL(?:UMN)?\s+)?(\d+)/gi,
+    transform: (match) => {
+      const screen = toJavaName(match[1]!);
+      const line = match[2];
+      const col = match[3];
+      return `terminal.displayAt(${line}, ${col}, ${screen}); // DISPLAY screen at position`;
+    },
+    description: 'Display screen at position',
+  },
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+(?:AT\s+)?LINE\s+(\d+)\s+(?:COL(?:UMN)?\s+)?(\d+)/gi,
+    transform: (match) => {
+      const field = toJavaName(match[1]!);
+      const line = match[2];
+      const col = match[3];
+      return `${field} = terminal.acceptAt(${line}, ${col}); // ACCEPT at position`;
+    },
+    description: 'Accept input at screen position',
+  },
+  {
+    pattern: /DISPLAY\s+(\w[\w-]*)\s+UPON\s+CRT/gi,
+    transform: (match) => {
+      const screen = toJavaName(match[1]!);
+      return `terminal.displayScreen(${screen}); // DISPLAY screen UPON CRT`;
+    },
+    description: 'Display screen upon CRT',
+  },
+  {
+    pattern: /ACCEPT\s+(\w[\w-]*)\s+FROM\s+CRT/gi,
+    transform: (match) => {
+      const screen = toJavaName(match[1]!);
+      return `terminal.acceptScreen(${screen}); // ACCEPT screen FROM CRT`;
+    },
+    description: 'Accept screen from CRT',
+  },
+  
+  // EXEC SQL patterns (must be before simpler patterns)
+  {
+    pattern: /EXEC\s+SQL\s+SELECT\s+(.+?)\s+INTO\s+(.+?)\s+FROM\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const columns = match[1]!.trim();
+      const hostVars = match[2]!.trim().split(/\s*,\s*/).map(v => toJavaName(v.replace(/^:/, ''))).join(', ');
+      const table = match[3]!.trim();
+      return `// EXEC SQL SELECT INTO
+ResultSet rs = statement.executeQuery("SELECT ${columns} FROM ${table}");
+if (rs.next()) { /* Assign to: ${hostVars} */ }`;
+    },
+    description: 'Execute SQL SELECT INTO',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+DECLARE\s+(\w[\w-]*)\s+CURSOR\s+FOR\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cursor = toJavaName(match[1]!);
+      const query = match[2]!.trim().replace(/"/g, '\\"');
+      return `// DECLARE CURSOR ${match[1]}
+PreparedStatement ${cursor}Stmt = connection.prepareStatement("${query}");`;
+    },
+    description: 'Declare SQL cursor',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+OPEN\s+(\w[\w-]*)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cursor = toJavaName(match[1]!);
+      return `// OPEN CURSOR ${match[1]}
+ResultSet ${cursor}Rs = ${cursor}Stmt.executeQuery();`;
+    },
+    description: 'Open SQL cursor',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+FETCH\s+(\w[\w-]*)\s+INTO\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cursor = toJavaName(match[1]!);
+      const hostVars = match[2]!.trim().split(/\s*,\s*/).map(v => toJavaName(v.replace(/^:/, ''))).join(', ');
+      return `// FETCH ${match[1]} INTO ${hostVars}
+if (${cursor}Rs.next()) { /* Assign to: ${hostVars} */ } else { sqlcode = 100; }`;
+    },
+    description: 'Fetch from SQL cursor',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+CLOSE\s+(\w[\w-]*)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cursor = toJavaName(match[1]!);
+      return `// CLOSE CURSOR ${match[1]}
+${cursor}Rs.close();`;
+    },
+    description: 'Close SQL cursor',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+INSERT\s+INTO\s+(\w[\w-]*)\s*\((.+?)\)\s*VALUES\s*\((.+?)\)\s+END-EXEC/gi,
+    transform: (match) => {
+      const table = match[1]!;
+      const columns = match[2]!.trim();
+      const values = match[3]!.trim();
+      return `// INSERT INTO ${table}
+statement.executeUpdate("INSERT INTO ${table} (${columns}) VALUES (${values.replace(/"/g, '\\"')})");`;
+    },
+    description: 'Execute SQL INSERT',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+UPDATE\s+(\w[\w-]*)\s+SET\s+(.+?)\s+WHERE\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const table = match[1]!;
+      const setClause = match[2]!.trim();
+      const whereClause = match[3]!.trim();
+      return `// UPDATE ${table}
+statement.executeUpdate("UPDATE ${table} SET ${setClause} WHERE ${whereClause}");`;
+    },
+    description: 'Execute SQL UPDATE',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+DELETE\s+FROM\s+(\w[\w-]*)\s+WHERE\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const table = match[1]!;
+      const whereClause = match[2]!.trim();
+      return `// DELETE FROM ${table}
+statement.executeUpdate("DELETE FROM ${table} WHERE ${whereClause}");`;
+    },
+    description: 'Execute SQL DELETE',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+PREPARE\s+(\w[\w-]*)\s+FROM\s+:?(\w[\w-]*)\s+END-EXEC/gi,
+    transform: (match) => {
+      const stmtName = toJavaName(match[1]!);
+      const sqlVar = toJavaName(match[2]!);
+      return `// PREPARE ${match[1]}
+PreparedStatement ${stmtName} = connection.prepareStatement(${sqlVar});`;
+    },
+    description: 'Prepare SQL statement',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+EXECUTE\s+(\w[\w-]*)(?:\s+USING\s+(.+?))?\s+END-EXEC/gi,
+    transform: (match) => {
+      const stmtName = toJavaName(match[1]!);
+      const using = match[2] ? ` // Using: ${match[2]}` : '';
+      return `// EXECUTE ${match[1]}${using}
+${stmtName}.execute();`;
+    },
+    description: 'Execute prepared SQL statement',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+COMMIT(?:\s+WORK)?\s+END-EXEC/gi,
+    transform: () => `// COMMIT
+connection.commit();`,
+    description: 'SQL commit',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+ROLLBACK(?:\s+WORK)?\s+END-EXEC/gi,
+    transform: () => `// ROLLBACK
+connection.rollback();`,
+    description: 'SQL rollback',
+  },
+  {
+    pattern: /EXEC\s+SQL\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const sql = match[1]!.trim();
+      return `// EXEC SQL\nstatement.execute("${sql.replace(/"/g, '\\"')}");`;
+    },
+    description: 'Execute SQL (general)',
+  },
+  
+  // EXEC CICS patterns (must be before general patterns)
+  {
+    pattern: /EXEC\s+CICS\s+READ\s+FILE\s*\(\s*'([^']+)'\s*\)\s+INTO\s*\(\s*(\w[\w-]*)\s*\)\s+RIDFLD\s*\(\s*(\w[\w-]*)\s*\)(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      const into = toJavaName(match[2]!);
+      const key = toJavaName(match[3]!);
+      return `// CICS READ
+${into} = cicsFile.read("${file}", ${key});`;
+    },
+    description: 'CICS read file',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+WRITE\s+FILE\s*\(\s*'([^']+)'\s*\)\s+FROM\s*\(\s*(\w[\w-]*)\s*\)\s+RIDFLD\s*\(\s*(\w[\w-]*)\s*\)(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      const from = toJavaName(match[2]!);
+      const key = toJavaName(match[3]!);
+      return `// CICS WRITE
+cicsFile.write("${file}", ${key}, ${from});`;
+    },
+    description: 'CICS write file',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+SEND\s+MAP\s*\(\s*'([^']+)'\s*\)\s+MAPSET\s*\(\s*'([^']+)'\s*\)(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const map = match[1]!;
+      const mapset = match[2]!;
+      return `// CICS SEND MAP
+cicsScreen.sendMap("${mapset}", "${map}");`;
+    },
+    description: 'CICS send map',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+RECEIVE\s+MAP\s*\(\s*'([^']+)'\s*\)\s+MAPSET\s*\(\s*'([^']+)'\s*\)\s+INTO\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const map = match[1]!;
+      const mapset = match[2]!;
+      const into = toJavaName(match[3]!);
+      return `// CICS RECEIVE MAP
+${into} = cicsScreen.receiveMap("${mapset}", "${map}");`;
+    },
+    description: 'CICS receive map',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+RETURN(?:\s+TRANSID\s*\(\s*'([^']+)'\s*\))?(?:\s+COMMAREA\s*\(\s*(\w[\w-]*)\s*\))?\s+END-EXEC/gi,
+    transform: (match) => {
+      const transid = match[1] ? `"${match[1]}"` : 'null';
+      const commarea = match[2] ? toJavaName(match[2]) : 'null';
+      return `// CICS RETURN
+cicsTransaction.returnControl(${transid}, ${commarea});`;
+    },
+    description: 'CICS return',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+LINK\s+PROGRAM\s*\(\s*'([^']+)'\s*\)(?:\s+COMMAREA\s*\(\s*(\w[\w-]*)\s*\))?\s+END-EXEC/gi,
+    transform: (match) => {
+      const program = match[1]!;
+      const commarea = match[2] ? toJavaName(match[2]) : 'null';
+      return `// CICS LINK
+cicsTransaction.link("${program}", ${commarea});`;
+    },
+    description: 'CICS link program',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+XCTL\s+PROGRAM\s*\(\s*'([^']+)'\s*\)(?:\s+COMMAREA\s*\(\s*(\w[\w-]*)\s*\))?\s+END-EXEC/gi,
+    transform: (match) => {
+      const program = match[1]!;
+      const commarea = match[2] ? toJavaName(match[2]) : 'null';
+      return `// CICS XCTL
+cicsTransaction.transfer("${program}", ${commarea});`;
+    },
+    description: 'CICS transfer control',
+  },
+  {
+    pattern: /EXEC\s+CICS\s+(.+?)\s+END-EXEC/gi,
+    transform: (match) => {
+      const cmd = match[1]!.trim();
+      return `// EXEC CICS ${cmd}\ncicsTransaction.execute("${cmd}");`;
+    },
+    description: 'Execute CICS command (general)',
+  },
+  
+  // Screen attributes
+  {
+    pattern: /BLANK\s+SCREEN/gi,
+    transform: () => `terminal.clearScreen(); // BLANK SCREEN`,
+    description: 'Blank screen',
+  },
+  {
+    pattern: /BLANK\s+LINE/gi,
+    transform: () => `terminal.clearLine(); // BLANK LINE`,
+    description: 'Blank line',
+  },
+  {
+    pattern: /ERASE\s+(?:EOS|EOL|SCREEN)/gi,
+    transform: (match) => `terminal.erase(); // ${match[0]}`,
+    description: 'Erase screen or line',
+  },
+
+  // ==== Error/exception handling clauses - must be before DISPLAY ====
   // NOT patterns must come before non-NOT patterns
   // NOT INVALID KEY clause
   {
@@ -981,7 +1245,7 @@ export const STATEMENT_RULES: StatementRule[] = [
     transform: () => '// NEXT SENTENCE - continue to next statement',
     description: 'Next sentence',
   },
-  // SORT statement
+  // SORT statement with USING/GIVING
   {
     pattern: /SORT\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(\w[\w-]*)\s+GIVING\s+(\w[\w-]*)/gi,
     transform: (match) => {
@@ -991,9 +1255,54 @@ export const STATEMENT_RULES: StatementRule[] = [
       const output = toJavaName(match[4]!);
       return `// SORT: ${sortWork}\nCollections.sort(${input}, Comparator.comparing(r -> r.${key}));\n${output} = ${input};`;
     },
-    description: 'Sort file',
+    description: 'Sort file with USING/GIVING',
   },
-  // MERGE statement
+  // SORT statement with INPUT/OUTPUT PROCEDURE
+  {
+    pattern: /SORT\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+INPUT\s+PROCEDURE\s+(?:IS\s+)?(\w[\w-]*)\s+OUTPUT\s+PROCEDURE\s+(?:IS\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const sortWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const inputProc = toJavaName(match[3]!);
+      const outputProc = toJavaName(match[4]!);
+      return `// SORT: ${sortWork} with procedures
+${inputProc}(); // INPUT PROCEDURE - populates sort buffer via RELEASE
+Collections.sort(sortBuffer, Comparator.comparing(r -> r.${key}));
+${outputProc}(); // OUTPUT PROCEDURE - retrieves from sort buffer via RETURN`;
+    },
+    description: 'Sort with INPUT/OUTPUT PROCEDURE',
+  },
+  // SORT statement with INPUT PROCEDURE only (GIVING output)
+  {
+    pattern: /SORT\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+INPUT\s+PROCEDURE\s+(?:IS\s+)?(\w[\w-]*)\s+GIVING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const sortWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const inputProc = toJavaName(match[3]!);
+      const output = toJavaName(match[4]!);
+      return `// SORT: ${sortWork} with INPUT PROCEDURE
+${inputProc}(); // INPUT PROCEDURE - populates sort buffer via RELEASE
+Collections.sort(sortBuffer, Comparator.comparing(r -> r.${key}));
+${output}.writeAll(sortBuffer);`;
+    },
+    description: 'Sort with INPUT PROCEDURE and GIVING',
+  },
+  // SORT statement with OUTPUT PROCEDURE only (USING input)
+  {
+    pattern: /SORT\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(\w[\w-]*)\s+OUTPUT\s+PROCEDURE\s+(?:IS\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const sortWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const input = toJavaName(match[3]!);
+      const outputProc = toJavaName(match[4]!);
+      return `// SORT: ${sortWork} with OUTPUT PROCEDURE
+sortBuffer.addAll(${input}.readAll());
+Collections.sort(sortBuffer, Comparator.comparing(r -> r.${key}));
+${outputProc}(); // OUTPUT PROCEDURE - retrieves from sort buffer via RETURN`;
+    },
+    description: 'Sort with USING and OUTPUT PROCEDURE',
+  },
+  // MERGE statement with USING/GIVING
   {
     pattern: /MERGE\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(.+?)\s+GIVING\s+(\w[\w-]*)/gi,
     transform: (match) => {
@@ -1003,7 +1312,21 @@ export const STATEMENT_RULES: StatementRule[] = [
       const output = toJavaName(match[4]!);
       return `// MERGE: ${mergeWork} with key ${key}\n${output} = merge(${inputs}, Comparator.comparing(r -> r.${key}));`;
     },
-    description: 'Merge files',
+    description: 'Merge files with USING/GIVING',
+  },
+  // MERGE statement with OUTPUT PROCEDURE
+  {
+    pattern: /MERGE\s+(\w[\w-]*)\s+(?:ON\s+)?(?:ASCENDING|DESCENDING)\s+(?:KEY\s+)?(\w[\w-]*)\s+USING\s+(.+?)\s+OUTPUT\s+PROCEDURE\s+(?:IS\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const mergeWork = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      const inputs = match[3]!.split(/\s+/).map(i => toJavaName(i)).join(', ');
+      const outputProc = toJavaName(match[4]!);
+      return `// MERGE: ${mergeWork} with OUTPUT PROCEDURE
+sortBuffer = merge(${inputs}, Comparator.comparing(r -> r.${key}));
+${outputProc}(); // OUTPUT PROCEDURE - retrieves from merge buffer via RETURN`;
+    },
+    description: 'Merge with OUTPUT PROCEDURE',
   },
   // START statement (indexed file positioning)
   {
@@ -1115,6 +1438,39 @@ export const STATEMENT_RULES: StatementRule[] = [
       return `// USE ERROR PROCEDURE ON ${match[1]} - file error handler`;
     },
     description: 'Use error procedure',
+  },
+  // USE BEFORE REPORTING (Report Writer declarative)
+  {
+    pattern: /USE\s+(?:GLOBAL\s+)?BEFORE\s+REPORTING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const reportGroup = toJavaName(match[1]!);
+      return `// USE BEFORE REPORTING ${match[1]}\nprivate void beforeReporting${toClassName(match[1]!)}() {`;
+    },
+    description: 'Use before reporting declarative',
+  },
+  // USE AFTER REPORTING (Report Writer declarative)
+  {
+    pattern: /USE\s+(?:GLOBAL\s+)?AFTER\s+REPORTING\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const reportGroup = toJavaName(match[1]!);
+      return `// USE AFTER REPORTING ${match[1]}\nprivate void afterReporting${toClassName(match[1]!)}() {`;
+    },
+    description: 'Use after reporting declarative',
+  },
+  // SUPPRESS PRINTING (Report Writer)
+  {
+    pattern: /SUPPRESS\s+PRINTING/gi,
+    transform: () => `reportSuppressPrinting = true; // SUPPRESS PRINTING`,
+    description: 'Suppress report printing',
+  },
+  // Screen attributes - WITH clauses
+  {
+    pattern: /WITH\s+(HIGHLIGHT|BLINK|REVERSE-VIDEO|UNDERLINE)/gi,
+    transform: (match) => {
+      const attr = match[1]!.toLowerCase().replace(/-/g, '');
+      return `/* Screen attribute: ${attr} */`;
+    },
+    description: 'Screen attribute',
   },
   // TRANSFORM statement (legacy)
   {
@@ -1244,34 +1600,6 @@ export const STATEMENT_RULES: StatementRule[] = [
       return `${ret}${obj}.${method}(${params});`;
     },
     description: 'Invoke method (OO)',
-  },
-  // JSON GENERATE
-  {
-    pattern: /JSON\s+GENERATE\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
-    transform: (match) => {
-      const target = toJavaName(match[1]!);
-      const source = toJavaName(match[2]!);
-      return `${target} = new ObjectMapper().writeValueAsString(${source}); // JSON GENERATE`;
-    },
-    description: 'Generate JSON',
-  },
-  // EXEC SQL (embedded SQL)
-  {
-    pattern: /EXEC\s+SQL\s+(.+?)\s+END-EXEC/gi,
-    transform: (match) => {
-      const sql = match[1]!.trim();
-      return `// EXEC SQL\nstatement.execute("${sql.replace(/"/g, '\\"')}");`;
-    },
-    description: 'Execute SQL',
-  },
-  // EXEC CICS
-  {
-    pattern: /EXEC\s+CICS\s+(.+?)\s+END-EXEC/gi,
-    transform: (match) => {
-      const cmd = match[1]!.trim();
-      return `// EXEC CICS ${cmd}\ncicsTransaction.execute("${cmd}");`;
-    },
-    description: 'Execute CICS command',
   },
 ];
 

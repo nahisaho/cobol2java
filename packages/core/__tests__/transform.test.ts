@@ -674,3 +674,221 @@ describe('CORRESPONDING statement transformations', () => {
     expect(result).toContain('copyCorresponding');
   });
 });
+describe('SORT/MERGE with INPUT/OUTPUT PROCEDURE', () => {
+  it('transforms SORT with INPUT/OUTPUT PROCEDURE', () => {
+    const result = transformStatement(
+      'SORT SORT-FILE ASCENDING KEY SORT-KEY INPUT PROCEDURE IS INPUT-PROC OUTPUT PROCEDURE IS OUTPUT-PROC'
+    );
+    expect(result).toContain('inputProc()');
+    expect(result).toContain('outputProc()');
+    expect(result).toContain('Collections.sort');
+    expect(result).toContain('sortBuffer');
+  });
+
+  it('transforms SORT with INPUT PROCEDURE and GIVING', () => {
+    const result = transformStatement(
+      'SORT SORT-WORK DESCENDING KEY CUST-ID INPUT PROCEDURE IS PREPARE-DATA GIVING OUT-FILE'
+    );
+    expect(result).toContain('prepareData()');
+    expect(result).toContain('outFile.writeAll');
+    expect(result).toContain('Collections.sort');
+  });
+
+  it('transforms SORT with USING and OUTPUT PROCEDURE', () => {
+    const result = transformStatement(
+      'SORT SORT-AREA ASCENDING KEY EMP-NUM USING IN-FILE OUTPUT PROCEDURE IS PROCESS-SORTED'
+    );
+    expect(result).toContain('inFile.readAll');
+    expect(result).toContain('processSorted()');
+    expect(result).toContain('Collections.sort');
+  });
+
+  it('transforms MERGE with OUTPUT PROCEDURE', () => {
+    const result = transformStatement(
+      'MERGE MERGE-FILE ASCENDING KEY M-KEY USING FILE-A FILE-B OUTPUT PROCEDURE IS MERGE-OUTPUT'
+    );
+    expect(result).toContain('merge(');
+    expect(result).toContain('mergeOutput()');
+    expect(result).toContain('fileA');
+    expect(result).toContain('fileB');
+  });
+});
+
+describe('Report Writer transformations', () => {
+  it('transforms INITIATE', () => {
+    const result = transformStatement('INITIATE SALES-REPORT');
+    expect(result).toContain('salesReport.initiate()');
+  });
+
+  it('transforms GENERATE', () => {
+    const result = transformStatement('GENERATE DETAIL-LINE');
+    expect(result).toContain('detailLine.generate()');
+  });
+
+  it('transforms TERMINATE', () => {
+    const result = transformStatement('TERMINATE SALES-REPORT');
+    expect(result).toContain('salesReport.terminate()');
+  });
+
+  it('transforms USE BEFORE REPORTING', () => {
+    const result = transformStatement('USE BEFORE REPORTING HEADER-GROUP');
+    expect(result).toContain('beforeReportingHeaderGroup');
+  });
+
+  it('transforms SUPPRESS PRINTING', () => {
+    const result = transformStatement('SUPPRESS PRINTING');
+    expect(result).toContain('reportSuppressPrinting = true');
+  });
+});
+
+describe('Screen Section transformations', () => {
+  it('transforms DISPLAY at position', () => {
+    const result = transformStatement('DISPLAY WS-MESSAGE LINE 5 COLUMN 10');
+    expect(result).toContain('displayAt(5, 10');
+    expect(result).toContain('wsMessage');
+  });
+
+  it('transforms ACCEPT at position', () => {
+    const result = transformStatement('ACCEPT WS-INPUT LINE 10 COL 15');
+    expect(result).toContain('acceptAt(10, 15');
+    expect(result).toContain('wsInput');
+  });
+
+  it('transforms DISPLAY UPON CRT', () => {
+    const result = transformStatement('DISPLAY MAIN-SCREEN UPON CRT');
+    expect(result).toContain('displayScreen');
+    expect(result).toContain('mainScreen');
+  });
+
+  it('transforms ACCEPT FROM CRT', () => {
+    const result = transformStatement('ACCEPT INPUT-SCREEN FROM CRT');
+    expect(result).toContain('acceptScreen');
+    expect(result).toContain('inputScreen');
+  });
+
+  it('transforms BLANK SCREEN', () => {
+    const result = transformStatement('BLANK SCREEN');
+    expect(result).toContain('clearScreen');
+  });
+});
+
+describe('EXEC SQL transformations', () => {
+  it('transforms EXEC SQL SELECT INTO', () => {
+    const result = transformStatement(
+      'EXEC SQL SELECT NAME, SALARY INTO :WS-NAME, :WS-SALARY FROM EMPLOYEES END-EXEC'
+    );
+    expect(result).toContain('executeQuery');
+    expect(result).toContain('SELECT NAME, SALARY FROM EMPLOYEES');
+    expect(result).toContain('wsName');
+    expect(result).toContain('wsSalary');
+  });
+
+  it('transforms EXEC SQL DECLARE CURSOR', () => {
+    const result = transformStatement(
+      'EXEC SQL DECLARE EMPCUR CURSOR FOR SELECT * FROM EMP END-EXEC'
+    );
+    expect(result).toContain('empcurStmt');
+    expect(result).toContain('prepareStatement');
+    expect(result).toContain('SELECT * FROM EMP');
+  });
+
+  it('transforms EXEC SQL OPEN cursor', () => {
+    const result = transformStatement('EXEC SQL OPEN EMPCUR END-EXEC');
+    expect(result).toContain('empcurRs');
+    expect(result).toContain('empcurStmt.executeQuery');
+  });
+
+  it('transforms EXEC SQL FETCH cursor', () => {
+    const result = transformStatement(
+      'EXEC SQL FETCH EMPCUR INTO :EMP-NAME, :EMP-ID END-EXEC'
+    );
+    expect(result).toContain('empcurRs.next()');
+    expect(result).toContain('empName');
+    expect(result).toContain('empId');
+    expect(result).toContain('sqlcode = 100');
+  });
+
+  it('transforms EXEC SQL CLOSE cursor', () => {
+    const result = transformStatement('EXEC SQL CLOSE EMPCUR END-EXEC');
+    expect(result).toContain('empcurRs.close()');
+  });
+
+  it('transforms EXEC SQL INSERT', () => {
+    const result = transformStatement(
+      'EXEC SQL INSERT INTO CUSTOMERS (ID, NAME) VALUES (:C-ID, :C-NAME) END-EXEC'
+    );
+    expect(result).toContain('executeUpdate');
+    expect(result).toContain('INSERT INTO CUSTOMERS');
+  });
+
+  it('transforms EXEC SQL UPDATE', () => {
+    const result = transformStatement(
+      'EXEC SQL UPDATE ACCOUNTS SET BALANCE = :NEW-BAL WHERE ACCT-NO = :ACCT END-EXEC'
+    );
+    expect(result).toContain('executeUpdate');
+    expect(result).toContain('UPDATE ACCOUNTS');
+  });
+
+  it('transforms EXEC SQL DELETE', () => {
+    const result = transformStatement(
+      'EXEC SQL DELETE FROM TEMP_TABLE WHERE STATUS = :ST END-EXEC'
+    );
+    expect(result).toContain('executeUpdate');
+    expect(result).toContain('DELETE FROM TEMP_TABLE');
+  });
+
+  it('transforms EXEC SQL COMMIT', () => {
+    const result = transformStatement('EXEC SQL COMMIT WORK END-EXEC');
+    expect(result).toContain('connection.commit()');
+  });
+
+  it('transforms EXEC SQL ROLLBACK', () => {
+    const result = transformStatement('EXEC SQL ROLLBACK END-EXEC');
+    expect(result).toContain('connection.rollback()');
+  });
+});
+
+describe('EXEC CICS transformations', () => {
+  it('transforms EXEC CICS SEND MAP', () => {
+    const result = transformStatement(
+      "EXEC CICS SEND MAP('MENU01') MAPSET('MENUSET') ERASE END-EXEC"
+    );
+    expect(result).toContain('sendMap');
+    expect(result).toContain('MENUSET');
+    expect(result).toContain('MENU01');
+  });
+
+  it('transforms EXEC CICS RECEIVE MAP', () => {
+    const result = transformStatement(
+      "EXEC CICS RECEIVE MAP('MENU01') MAPSET('MENUSET') INTO(WS-MENU-DATA) END-EXEC"
+    );
+    expect(result).toContain('receiveMap');
+    expect(result).toContain('wsMenuData');
+  });
+
+  it('transforms EXEC CICS RETURN', () => {
+    const result = transformStatement(
+      "EXEC CICS RETURN TRANSID('MENU') COMMAREA(WS-COMM) END-EXEC"
+    );
+    expect(result).toContain('returnControl');
+    expect(result).toContain('"MENU"');
+    expect(result).toContain('wsComm');
+  });
+
+  it('transforms EXEC CICS LINK', () => {
+    const result = transformStatement(
+      "EXEC CICS LINK PROGRAM('SUBPROG') COMMAREA(WS-DATA) END-EXEC"
+    );
+    expect(result).toContain('link');
+    expect(result).toContain('SUBPROG');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms EXEC CICS XCTL', () => {
+    const result = transformStatement(
+      "EXEC CICS XCTL PROGRAM('NEXTPROG') END-EXEC"
+    );
+    expect(result).toContain('transfer');
+    expect(result).toContain('NEXTPROG');
+  });
+});
