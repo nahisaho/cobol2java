@@ -14,3 +14,4 @@ export * from './dialect/index.js';
 export * from './batch/index.js';
 export * from './diff/index.js';
 export * from './javadoc/index.js';
+export * from './security/index.js';
