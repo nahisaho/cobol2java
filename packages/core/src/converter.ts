@@ -26,6 +26,8 @@ export interface ConversionOptions {
   llmApiKey?: string;
   /** Generate Spring Boot compatible code */
   springBoot?: boolean;
+  /** Generate Spring Batch compatible code (tasklet/job) */
+  springBatch?: boolean;
   /** Generate unit tests */
   generateTests?: boolean;
   /** Target Java package name */
@@ -134,6 +136,7 @@ export async function convert(
     packageName: opts.packageName!,
     javaVersion: opts.javaVersion!,
     springBoot: opts.springBoot!,
+    springBatch: opts.springBatch ?? false,
     llmClient,
   });
 

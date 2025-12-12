@@ -26,6 +26,19 @@
     "@types/node": "^20.10.0",
     "typescript": "^5.4.0"
   },
-  "keywords": ["cobol", "java", "cli", "converter"],
-  "license": "MIT"
+  "keywords": ["cobol", "java", "cli", "converter", "migration", "legacy", "mainframe"],
+  "license": "MIT",
+  "author": "nahisaho",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nahisaho/cobol2java.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/nahisaho/cobol2java#readme",
+  "bugs": {
+    "url": "https://github.com/nahisaho/cobol2java/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

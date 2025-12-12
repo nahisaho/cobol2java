@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import { convertCommand } from './commands/convert.js';
 import { validateCommand } from './commands/validate.js';
 import { benchmarkCommand } from './commands/benchmark.js';
+import { reportCommand } from './commands/report.js';
 
 const program = new Command();
 
@@ -20,6 +21,7 @@ program
 program.addCommand(convertCommand);
 program.addCommand(validateCommand);
 program.addCommand(benchmarkCommand);
+program.addCommand(reportCommand);
 
 /**
  * Run the CLI

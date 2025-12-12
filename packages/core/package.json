@@ -24,6 +24,22 @@
     "typescript": "^5.4.0"
   },
   "peerDependencies": {},
-  "keywords": ["cobol", "java", "converter", "transpiler"],
-  "license": "MIT"
+  "keywords": ["cobol", "java", "converter", "transpiler", "migration", "legacy", "mainframe"],
+  "license": "MIT",
+  "author": "nahisaho",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nahisaho/cobol2java.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/nahisaho/cobol2java#readme",
+  "bugs": {
+    "url": "https://github.com/nahisaho/cobol2java/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

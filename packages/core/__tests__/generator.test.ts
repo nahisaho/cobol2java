@@ -8,7 +8,9 @@ describe('JavaGenerator', () => {
   const createGenerator = (options: Partial<Parameters<typeof JavaGenerator.prototype.generate>[0]> = {}) => {
     return new JavaGenerator({
       packageName: 'com.example',
+      javaVersion: 17,
       springBoot: false,
+      springBatch: false,
       ...options,
     });
   };
@@ -237,6 +239,92 @@ describe('JavaGenerator', () => {
 
       expect(result.code).toContain('Spring Boot Service');
       expect(result.code).toContain('Can be injected into other components');
+    });
+  });
+
+  describe('Spring Batch generation', () => {
+    it('should generate Tasklet implementation when springBatch is true', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. BATCH-JOB.
+        PROCEDURE DIVISION.
+        MAIN.
+            DISPLAY "BATCH PROCESSING".
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('implements Tasklet');
+      expect(result.code).toContain('@Component');
+      expect(result.code).toContain('import org.springframework.batch.core.step.tasklet.Tasklet');
+      expect(result.code).toContain('import org.springframework.batch.repeat.RepeatStatus');
+    });
+
+    it('should generate execute method with Tasklet signature', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. DATA-PROCESSOR.
+        PROCEDURE DIVISION.
+        MAIN.
+            DISPLAY "PROCESSING".
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext)');
+      expect(result.code).toContain('return RepeatStatus.FINISHED');
+      expect(result.code).toContain('@Override');
+    });
+
+    it('should include batch-specific imports', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. ETL-TASK.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('import org.springframework.batch.core.StepContribution');
+      expect(result.code).toContain('import org.springframework.batch.core.scope.context.ChunkContext');
+      expect(result.code).toContain('import lombok.extern.slf4j.Slf4j');
+    });
+
+    it('should not generate main method when springBatch is true', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. NIGHTLY-BATCH.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).not.toContain('public static void main');
+    });
+
+    it('should generate Javadoc with Spring Batch context', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. REPORT-GENERATOR.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('Spring Batch Tasklet');
+      expect(result.code).toContain('Executes as a step in a batch job');
     });
   });
 });
