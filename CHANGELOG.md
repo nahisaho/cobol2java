@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-12-12
+
+### Added
+
+#### P15: LLM Integration Enhancement
+- **Prompt Templates**: 7 structured templates for COBOL analysis, conversion, optimization
+  - `COBOL_ANALYSIS_TEMPLATE`: Analyze COBOL code structure
+  - `COBOL_PATTERN_TEMPLATE`: Detect common COBOL patterns
+  - `COBOL2JAVA_TEMPLATE`: Standard COBOL to Java conversion
+  - `COBOL2SPRINGBOOT_TEMPLATE`: Spring Boot specific conversion
+  - `JAVA_OPTIMIZATION_TEMPLATE`: Optimize generated Java code
+  - `JAVA_TEST_TEMPLATE`: Generate JUnit 5 tests
+  - `DOCUMENTATION_TEMPLATE`: Generate code documentation
+- **Enhanced LLM Client**: Advanced LLM client wrapper
+  - Token estimation with code-aware heuristics
+  - Response caching with LRU eviction
+  - Rate limiting for API protection
+  - Template-based completion with variable substitution
+- **AI Conversion Pipeline**: Multi-stage conversion pipeline
+  - 5 stages: analysis → pattern-detection → conversion → optimization → test-generation
+  - Independent stage execution with error handling
+  - Token usage and processing time tracking
+  - Comprehensive stage results with metadata
+- **Streaming Support**: Added streaming to Claude client
+- **58 LLM module tests**
+
+#### P14: COBOLEval Benchmark Integration
+- **Benchmark Runner**: Automated COBOLEval benchmark execution
+- **146 problems, 821 test cases**: Full COBOLEval coverage
+- **100% conversion rate**: All problems convert to valid Java
+
+#### P13: CI/CD Enhancement
+- **Codecov Integration**: Coverage reporting in CI
+- **Security Workflow**: Dependency audit, CodeQL, secrets scanning
+- **License Checking**: Automatic license compliance
+
+#### P12: Documentation Enhancement
+- **API Reference**: Security and Performance module documentation
+- **Conversion Examples**: Secure conversion and performance optimization samples
+
+### Changed
+- **Test Count**: Increased from 585 to 643 tests
+- **LLM Module**: Reorganized with prompts.ts, enhanced.ts, pipeline.ts
+
 ## [0.2.0] - 2025-12-12
 
 ### Added

@@ -8,7 +8,7 @@
 [![Security](https://github.com/your-org/cobol2java/actions/workflows/security.yml/badge.svg)](https://github.com/your-org/cobol2java/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/your-org/cobol2java/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/cobol2java)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Tests](https://img.shields.io/badge/tests-582%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-643%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
@@ -34,15 +34,19 @@ COBOL2Java は、レガシー COBOL コードを現代的な Java コードに�
 | 🤖 **LLM アシスト** | OpenAI, Claude, Ollama, GitHub Copilot による高品質変換 |
 | 📝 **Javadoc自動生成** | ドキュメント付きのクリーンなコード |
 | 🖥️ **複数のインターフェース** | CLI、Webアプリ、VS Code拡張 |
+| 🔒 **セキュリティ** | 入力検証、サニタイズ、機密データ秘匿 |
+| ⚡ **パフォーマンス** | キャッシュ、ストリーミング、プロファイリング |
+| 🧪 **ベンチマーク** | COBOLEval 146問で100%変換成功 |
+| 🧠 **AI パイプライン** | 分析→パターン検出→変換→最適化→テスト生成 |
 
 ## 📦 パッケージ構成
 
 \`\`\`
 packages/
-├── core/              # コアライブラリ (パーサー、ジェネレーター)
+├── core/              # コアライブラリ (パーサー、ジェネレーター、LLM)
 ├── cli/               # コマンドラインツール
 ├── webapp/            # Webアプリケーション (React)
-└── vscode-extension/  # VS Code 拡張機能
+└── web/               # VS Code 拡張機能
 \`\`\`
 
 ## 🚀 クイックスタート

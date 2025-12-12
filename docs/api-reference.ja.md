@@ -490,3 +490,137 @@ await delay(100);
 calc.record(10);
 console.log(`スループット: ${calc.getThroughput().toFixed(1)}/秒`);
 ```
+
+---
+
+## LLM モジュール
+
+### プロンプトテンプレート
+
+体系化されたLLMプロンプト管理。
+
+```typescript
+import {
+  renderPrompt,
+  getPromptTemplate,
+  listTemplates,
+  COBOL_ANALYSIS_TEMPLATE,
+  COBOL2JAVA_TEMPLATE,
+  JAVA_OPTIMIZATION_TEMPLATE,
+} from '@cobol2java/core';
+
+// 利用可能なテンプレート一覧
+console.log(listTemplates());
+// => ['cobol-analysis', 'cobol-patterns', 'cobol2java', ...]
+
+// テンプレート取得
+const template = getPromptTemplate('cobol2java');
+
+// テンプレートをレンダリング
+const { systemPrompt, userPrompt } = renderPrompt(COBOL2JAVA_TEMPLATE, {
+  cobolSource: 'MOVE 1 TO WS-COUNT.',
+  conversionNotes: 'Use Spring Boot conventions',
+});
+
+console.log(userPrompt);
+```
+
+#### 利用可能なテンプレート
+
+| テンプレートID | 用途 |
+|---------------|------|
+| `cobol-analysis` | COBOL構造分析 |
+| `cobol-patterns` | パターン検出 |
+| `cobol2java` | 標準変換 |
+| `cobol2springboot` | Spring Boot変換 |
+| `java-optimization` | Java最適化 |
+| `java-test-generation` | JUnit5テスト生成 |
+| `documentation` | ドキュメント生成 |
+
+### Enhanced LLM Client
+
+拡張機能付きLLMクライアント。
+
+```typescript
+import {
+  createLLMClient,
+  createEnhancedClient,
+} from '@cobol2java/core';
+
+// ベースクライアント作成
+const baseClient = createLLMClient({
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// 拡張クライアント作成
+const client = createEnhancedClient(baseClient, {
+  enableCache: true,
+  maxCacheSize: 100,
+  minRequestIntervalMs: 1000, // レート制限
+});
+
+// メタデータ付き補完
+const result = await client.completeWithMetadata(
+  'Convert this COBOL to Java...',
+  { maxTokens: 4096 }
+);
+
+console.log(`生成テキスト: ${result.text}`);
+console.log(`トークン使用量: ${result.usage?.totalTokens}`);
+console.log(`処理時間: ${result.processingTimeMs}ms`);
+
+// トークン推定
+const tokens = client.estimateTokens('Some text to estimate...');
+
+// キャッシュ管理
+console.log(client.getCacheStats()); // { size: 5, maxSize: 100 }
+client.clearCache();
+```
+
+### AI変換パイプライン
+
+段階的なAI補助変換。
+
+```typescript
+import {
+  createLLMClient,
+  createPipeline,
+} from '@cobol2java/core';
+
+const client = createLLMClient({
+  provider: 'claude',
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const pipeline = createPipeline(client);
+
+// フルパイプライン実行
+const result = await pipeline.run(cobolSource, {
+  stages: ['analysis', 'pattern-detection', 'conversion', 'optimization'],
+  conversionNotes: 'Use modern Java features',
+});
+
+console.log(`成功: ${result.success}`);
+console.log(`分析: ${result.analysis?.purpose}`);
+console.log(`パターン数: ${result.patterns?.length}`);
+console.log(`Javaコード: ${result.javaCode}`);
+console.log(`最適化コード: ${result.optimizedCode}`);
+console.log(`総トークン: ${result.totalTokenUsage.totalTokens}`);
+
+// ショートカットメソッド
+const analysis = await pipeline.analyze(cobolSource);
+const javaCode = await pipeline.convert(cobolSource);
+const { code, optimizedCode } = await pipeline.convertAndOptimize(cobolSource);
+```
+
+#### パイプラインステージ
+
+| ステージ | 出力 |
+|---------|------|
+| `analysis` | COBOL構造分析 |
+| `pattern-detection` | パターンリスト |
+| `conversion` | Javaコード |
+| `optimization` | 最適化Javaコード |
+| `test-generation` | JUnitテスト |
+| `validation` | 検証結果 |
