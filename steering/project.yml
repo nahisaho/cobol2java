@@ -23,7 +23,7 @@ tech_stack:
 
 # Current Status
 status:
-  tests: 643
+  tests: 658
   transformation_patterns: 130+
   intrinsic_functions: 60+
   coverage:
