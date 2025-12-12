@@ -197,7 +197,7 @@ export class CobolParser {
     let currentSection: 'identification' | 'environment' | 'data' | 'procedure' | null = null;
     let currentSubSection: 'file-control' | 'working-storage' | 'file' | 'special-names' | null = null;
     let currentParagraph: Paragraph | null = null;
-    let _currentFileDefinition: Partial<FileDefinition> | null = null;
+    const _currentFileDefinition: Partial<FileDefinition> | null = null;
     let selectBuffer = '';  // Buffer for multi-line SELECT statements
     let copyBuffer = '';    // Buffer for multi-line COPY statements
 

@@ -128,7 +128,7 @@ export class ChunkedProcessor extends EventEmitter {
     const chunks = this.splitIntoChunks(lines);
     const results: (T | null)[] = new Array(chunks.length).fill(null);
 
-    let startLines: number[] = [];
+    const startLines: number[] = [];
     let currentLine = 1;
     for (const chunk of chunks) {
       startLines.push(currentLine);

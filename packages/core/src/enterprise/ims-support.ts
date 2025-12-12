@@ -128,7 +128,7 @@ export class ImsParser {
    */
   private parseFunctionCode(code: string): DliFunction {
     // Remove quotes, trim, and handle common variable naming patterns
-    let upper = code.toUpperCase().replace(/['"]/g, '').trim();
+    const upper = code.toUpperCase().replace(/['"]/g, '').trim();
     
     // Handle common patterns like GN-FUNC, ISRT-FUNCTION, etc.
     if (upper.includes('-')) {
