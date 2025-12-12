@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-12
+
+### Added
+
+#### P11: Performance Optimization
+- **Cache Module**: `Cache<T>` with LRU/LFU/FIFO eviction policies
+- **Specialized Caches**: `AstCache`, `CodeCache` for AST and code caching
+- **Streaming Processing**: `ChunkedProcessor`, `LineTransform`, `StringBuilder`
+- **Profiling**: `Timer`, `Profiler`, `ThroughputCalculator`, `measureTime()`
+- **41 performance module tests**
+
+#### P10: Security Hardening
+- **Security Limits**: Configurable input size, complexity, and timeout limits
+- **Input Validation**: `validateInput()`, `validateIdentifier()`, `validateFilePath()`
+- **Sanitization**: `sanitizeInput()`, `sanitizeForJavaString/Identifier/Package()`
+- **Sensitive Data**: `redactSensitive()` for API key/password redaction
+- **56 security tests**
+- **docs/SECURITY.md**: Security guidelines documentation
+
+#### P9: Test Enhancement
+- **582 comprehensive tests** across all packages
+- **Property-based testing** with fast-check
+- **Edge case coverage** for parser and generator
+
+### Changed
+- **vite.config.ts**: Added `crypto`, `stream`, `events` to externals for Node.js compatibility
+
+### Fixed
+- **Stream processing**: Fixed `streamToString()` to handle both Buffer and string chunks
+
 ## [0.1.0] - 2025-12-12
 
 ### Added
