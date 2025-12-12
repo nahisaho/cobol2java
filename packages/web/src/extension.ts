@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { convert, type ConversionOptions, type ErrorInfo } from '@cobol2java/core';
+import { convert, type ConversionOptions, type ErrorInfo } from 'cobol2java-core';
 
 // Diagnostics collection for validation errors
 let diagnosticCollection: vscode.DiagnosticCollection;

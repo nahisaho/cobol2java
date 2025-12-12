@@ -1,5 +1,5 @@
 {
-  "name": "@cobol2java/cli",
+  "name": "cobol2java-cli",
   "version": "1.0.0",
   "description": "CLI for COBOL to Java conversion",
   "type": "module",
@@ -20,7 +20,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@cobol2java/core": "workspace:*",
+    "cobol2java-core": "workspace:*",
     "commander": "^12.0.0",
     "chalk": "^5.3.0",
     "ora": "^8.0.0"

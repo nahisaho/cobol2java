@@ -6,7 +6,7 @@
 
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
-import { CobolParser, formatError, type ErrorInfo } from '@cobol2java/core';
+import { CobolParser, formatError, type ErrorInfo } from 'cobol2java-core';
 
 export const validateCommand = new Command('validate')
   .description('Validate COBOL source file syntax')

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CobolParser, JavaGenerator, GeneratorOptions } from '@cobol2java/core';
+import { CobolParser, JavaGenerator, GeneratorOptions } from 'cobol2java-core';
 import {
   CobolCodeLensProvider,
   CobolHoverProvider,

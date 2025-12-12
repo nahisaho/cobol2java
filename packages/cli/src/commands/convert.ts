@@ -7,7 +7,7 @@
 import { Command } from 'commander';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { convert, type ConversionOptions, formatError, type ErrorInfo } from '@cobol2java/core';
+import { convert, type ConversionOptions, formatError, type ErrorInfo } from 'cobol2java-core';
 
 export const convertCommand = new Command('convert')
   .description('Convert COBOL source file to Java')

@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
-import { convert, type ConversionOptions } from '@cobol2java/core';
+import { convert, type ConversionOptions } from 'cobol2java-core';
 
 interface BenchmarkResult {
   name: string;

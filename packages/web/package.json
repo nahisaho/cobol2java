@@ -122,6 +122,6 @@
     "@vscode/vsce": "^3.2.0"
   },
   "dependencies": {
-    "@cobol2java/core": "workspace:*"
+    "cobol2java-core": "workspace:*"
   }
 }

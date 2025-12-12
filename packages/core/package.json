@@ -1,5 +1,5 @@
 {
-  "name": "@cobol2java/core",
+  "name": "cobol2java-core",
   "version": "1.0.0",
   "description": "Core COBOL to Java conversion library",
   "type": "module",

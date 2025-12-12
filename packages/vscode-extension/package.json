@@ -188,6 +188,6 @@
     "vitest": "^4.0.0"
   },
   "dependencies": {
-    "@cobol2java/core": "workspace:*"
+    "cobol2java-core": "workspace:*"
   }
 }

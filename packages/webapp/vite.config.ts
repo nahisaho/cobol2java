@@ -25,8 +25,8 @@ export default defineConfig({
     alias: {
       // Provide empty stub for vscode module in browser
       vscode: '/src/stubs/vscode.ts',
-      // Resolve @cobol2java/core to its built dist folder
-      '@cobol2java/core': path.resolve(__dirname, '../core/dist/index.js'),
+      // Resolve cobol2java-core to its built dist folder
+      'cobol2java-core': path.resolve(__dirname, '../core/dist/index.js'),
     },
   },
   optimizeDeps: {

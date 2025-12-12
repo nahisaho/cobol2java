@@ -1,4 +1,4 @@
-import type { ConversionResult } from '@cobol2java/core';
+import type { ConversionResult } from 'cobol2java-core';
 
 interface StatusBarProps {
   result: ConversionResult | null;

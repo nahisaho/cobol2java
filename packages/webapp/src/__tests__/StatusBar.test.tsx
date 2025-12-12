@@ -4,8 +4,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import StatusBar from '../components/StatusBar';
-import type { ConversionResult } from '@cobol2java/core';
-import { ErrorSeverity } from '@cobol2java/core';
+import type { ConversionResult } from 'cobol2java-core';
+import { ErrorSeverity } from 'cobol2java-core';
 
 describe('StatusBar', () => {
   const createResult = (overrides: Partial<ConversionResult> = {}): ConversionResult => ({

@@ -9,7 +9,7 @@
 import { Command } from 'commander';
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
-import { convert, type ConversionOptions, type ErrorInfo } from '@cobol2java/core';
+import { convert, type ConversionOptions, type ErrorInfo } from 'cobol2java-core';
 
 interface ReportEntry {
   file: string;

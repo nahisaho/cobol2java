@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 // Mock the convert function
-vi.mock('@cobol2java/core', async () => {
-  const actual = await vi.importActual('@cobol2java/core');
+vi.mock('cobol2java-core', async () => {
+  const actual = await vi.importActual('cobol2java-core');
   return {
     ...actual,
     convert: vi.fn(),

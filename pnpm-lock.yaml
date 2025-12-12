@@ -41,12 +41,12 @@ importers:
 
   packages/cli:
     dependencies:
-      '@cobol2java/core':
-        specifier: workspace:*
-        version: link:../core
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
+      cobol2java-core:
+        specifier: workspace:*
+        version: link:../core
       commander:
         specifier: ^12.0.0
         version: 12.1.0
@@ -73,7 +73,7 @@ importers:
 
   packages/vscode-extension:
     dependencies:
-      '@cobol2java/core':
+      cobol2java-core:
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -95,7 +95,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@cobol2java/core':
+      cobol2java-core:
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -114,12 +114,12 @@ importers:
 
   packages/webapp:
     dependencies:
-      '@cobol2java/core':
-        specifier: workspace:*
-        version: link:../core
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      cobol2java-core:
+        specifier: workspace:*
+        version: link:../core
       react:
         specifier: ^18.3.0
         version: 18.3.1

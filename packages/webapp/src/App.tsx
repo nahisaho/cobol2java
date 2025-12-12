@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { convert, type ConversionResult, ErrorSeverity } from '@cobol2java/core';
+import { convert, type ConversionResult, ErrorSeverity } from 'cobol2java-core';
 import Editor from './components/Editor';
 import Header from './components/Header';
 import StatusBar from './components/StatusBar';
