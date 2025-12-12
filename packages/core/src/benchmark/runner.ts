@@ -34,14 +34,43 @@ async function measureAsync<T>(fn: () => Promise<T>): Promise<{ result: T; durat
 }
 
 /**
+ * Prepare COBOL source for evaluation
+ * COBOLEval prompts are incomplete - add minimal PROCEDURE DIVISION if missing
+ */
+function prepareCobolSource(prompt: string): string {
+  const source = prompt.trim();
+  
+  // Check if PROCEDURE DIVISION exists as a standalone declaration (not in comments)
+  // Look for PROCEDURE DIVISION at start of line (with optional leading spaces)
+  const hasProcedureDiv = source.split('\n').some(line => {
+    const trimmed = line.trim();
+    // Skip comment lines (starting with *)
+    if (trimmed.startsWith('*')) return false;
+    return /^\s*PROCEDURE\s+DIVISION/i.test(line);
+  });
+  
+  if (!hasProcedureDiv) {
+    // Add minimal PROCEDURE DIVISION
+    return source + `
+
+       PROCEDURE DIVISION.
+           DISPLAY "PLACEHOLDER".
+           STOP RUN.
+`;
+  }
+  
+  return source;
+}
+
+/**
  * Evaluate a single COBOLEval problem
  */
 export async function evaluateProblem(problem: CobolEvalProblem, _timeoutMs: number = 30000): Promise<EvalResult> {
   const timer = new Timer('eval');
 
   try {
-    // Extract just the prompt COBOL code for conversion
-    const cobolSource = problem.prompt;
+    // Prepare COBOL source (add PROCEDURE DIVISION if missing)
+    const cobolSource = prepareCobolSource(problem.prompt);
 
     // Attempt conversion
     const { result, durationMs } = await measureAsync(() =>
