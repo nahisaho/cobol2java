@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('cobol2java')
   .description('Convert COBOL source code to Java')
-  .version('0.1.0');
+  .version('0.3.0');
 
 // Register commands
 program.addCommand(convertCommand);

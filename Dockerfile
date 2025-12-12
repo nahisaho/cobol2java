@@ -53,3 +53,10 @@ WORKDIR /data
 # Set entrypoint
 ENTRYPOINT ["node", "/app/packages/cli/dist/bin/cobol2java.js"]
 CMD ["--help"]
+
+# Labels
+LABEL org.opencontainers.image.title="COBOL2Java"
+LABEL org.opencontainers.image.description="COBOL to Java converter with LLM assistance"
+LABEL org.opencontainers.image.version="0.3.0"
+LABEL org.opencontainers.image.source="https://github.com/nahisaho/cobol2java"
+LABEL org.opencontainers.image.licenses="MIT"

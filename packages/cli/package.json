@@ -1,10 +1,13 @@
 {
-  "name": "cobol2java",
-  "version": "0.1.0",
+  "name": "@cobol2java/cli",
+  "version": "0.3.0",
   "description": "CLI for COBOL to Java conversion",
   "type": "module",
   "bin": {
     "cobol2java": "./dist/bin/cobol2java.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

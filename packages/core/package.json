@@ -1,6 +1,6 @@
 {
   "name": "@cobol2java/core",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Core COBOL to Java conversion library",
   "type": "module",
   "main": "./dist/index.js",

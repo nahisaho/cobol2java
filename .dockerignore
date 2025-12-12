@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (rebuilt in Docker)
+**/dist
+**/*.tsbuildinfo
+
+# Development files
+.git
+.gitignore
+.github
+.vscode
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+**/__tests__
+**/test
+coverage
+.nyc_output
+
+# Benchmark data
+coboleval/
+
+# Storage and temp
+storage/
+tmp/
+*.log
+
+# IDE
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# CI/CD
+.github/
+
+# Config files not needed in container
+.eslintrc*
+.prettierrc*
+tsconfig*.json
+vitest.config.ts
+typedoc.json

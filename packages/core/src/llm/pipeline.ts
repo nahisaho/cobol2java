@@ -518,7 +518,7 @@ export class AiConversionPipeline {
       'i'
     );
     const match = text.match(regex);
-    return match ? match[1].trim() : null;
+    return match && match[1] ? match[1].trim() : null;
   }
 
   /**
@@ -527,7 +527,7 @@ export class AiConversionPipeline {
   private extractCodeBlock(text: string, language: string): string | null {
     const regex = new RegExp(`\`\`\`${language}\\s*([\\s\\S]*?)\`\`\``, 'i');
     const match = text.match(regex);
-    return match ? match[1].trim() : null;
+    return match && match[1] ? match[1].trim() : null;
   }
 
   /**
