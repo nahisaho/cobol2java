@@ -45,6 +45,11 @@
         "command": "cobol2java.validate",
         "title": "Validate COBOL Source",
         "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.previewStatement",
+        "title": "Preview Statement as Java",
+        "category": "COBOL2Java"
       }
     ],
     "menus": {

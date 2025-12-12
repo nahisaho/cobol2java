@@ -413,4 +413,129 @@ describe('JavaGenerator', () => {
       expect(result.batchConfig).toBeUndefined();
     });
   });
+
+  describe('Validation helper generation', () => {
+    it('should generate validation helper class when generateValidation is true', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. CUSTOMER.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 CUSTOMER-ID PIC 9(5).
+        01 CUSTOMER-NAME PIC X(30).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = new JavaGenerator({
+        packageName: 'com.example',
+        javaVersion: 17,
+        springBoot: false,
+        springBatch: false,
+        generateValidation: true,
+      });
+      const result = await generator.generate(ast);
+
+      expect(result.validationHelper).toBeDefined();
+      expect(result.validationHelper).toContain('CustomerValidator');
+      expect(result.validationHelper).toContain('validateCustomerId');
+      expect(result.validationHelper).toContain('validateCustomerName');
+      expect(result.validationHelper).toContain('validateAll');
+      expect(result.validationHelper).toContain('isValid');
+    });
+
+    it('should validate string length based on PIC clause', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. TEST-PROG.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-NAME PIC X(20).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = new JavaGenerator({
+        packageName: 'com.example',
+        javaVersion: 17,
+        springBoot: false,
+        springBatch: false,
+        generateValidation: true,
+      });
+      const result = await generator.generate(ast);
+
+      expect(result.validationHelper).toContain('Maximum length is 20');
+    });
+
+    it('should validate alphabetic-only for PIC A', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. TEST-PROG.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-INITIAL PIC A(5).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = new JavaGenerator({
+        packageName: 'com.example',
+        javaVersion: 17,
+        springBoot: false,
+        springBatch: false,
+        generateValidation: true,
+      });
+      const result = await generator.generate(ast);
+
+      expect(result.validationHelper).toContain('alphabetic characters');
+    });
+
+    it('should validate numeric range for PIC 9', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. TEST-PROG.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-AGE PIC 9(3).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = new JavaGenerator({
+        packageName: 'com.example',
+        javaVersion: 17,
+        springBoot: false,
+        springBatch: false,
+        generateValidation: true,
+      });
+      const result = await generator.generate(ast);
+
+      expect(result.validationHelper).toContain('999');
+    });
+
+    it('should not generate validation helper when generateValidation is false', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SIMPLE-PROGRAM.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = new JavaGenerator({
+        packageName: 'com.example',
+        javaVersion: 17,
+        springBoot: false,
+        springBatch: false,
+        generateValidation: false,
+      });
+      const result = await generator.generate(ast);
+
+      expect(result.validationHelper).toBeUndefined();
+    });
+  });
 });

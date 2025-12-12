@@ -12,6 +12,8 @@ import {
   transformCondition,
   setLevel88Context,
   transform88LevelCondition,
+  clearTransformCache,
+  getTransformCacheStats,
 } from '../src/transform/index.js';
 
 describe('mapDataType', () => {
@@ -927,6 +929,106 @@ describe('EXEC CICS transformations', () => {
     expect(result).toContain('transfer');
     expect(result).toContain('NEXTPROG');
   });
+
+  it('transforms EXEC CICS STARTBR', () => {
+    const result = transformStatement(
+      "EXEC CICS STARTBR FILE('CUSTFILE') RIDFLD(WS-KEY) END-EXEC"
+    );
+    expect(result).toContain('startBrowse');
+    expect(result).toContain('CUSTFILE');
+    expect(result).toContain('wsKey');
+  });
+
+  it('transforms EXEC CICS READNEXT', () => {
+    const result = transformStatement(
+      "EXEC CICS READNEXT FILE('CUSTFILE') INTO(WS-RECORD) RIDFLD(WS-KEY) END-EXEC"
+    );
+    expect(result).toContain('readNext');
+    expect(result).toContain('wsRecord');
+    expect(result).toContain('wsKey');
+  });
+
+  it('transforms EXEC CICS READPREV', () => {
+    const result = transformStatement(
+      "EXEC CICS READPREV FILE('CUSTFILE') INTO(WS-RECORD) RIDFLD(WS-KEY) END-EXEC"
+    );
+    expect(result).toContain('readPrev');
+    expect(result).toContain('wsRecord');
+  });
+
+  it('transforms EXEC CICS ENDBR', () => {
+    const result = transformStatement(
+      "EXEC CICS ENDBR FILE('CUSTFILE') END-EXEC"
+    );
+    expect(result).toContain('endBrowse');
+    expect(result).toContain('custfileBrowser');
+  });
+
+  it('transforms EXEC CICS GETMAIN', () => {
+    const result = transformStatement(
+      "EXEC CICS GETMAIN SET(WS-PTR) LENGTH(1024) END-EXEC"
+    );
+    expect(result).toContain('wsPtr');
+    expect(result).toContain('new byte[');
+    expect(result).toContain('1024');
+  });
+
+  it('transforms EXEC CICS FREEMAIN', () => {
+    const result = transformStatement(
+      "EXEC CICS FREEMAIN DATA(WS-PTR) END-EXEC"
+    );
+    expect(result).toContain('wsPtr');
+    expect(result).toContain('null');
+  });
+
+  it('transforms EXEC CICS ASKTIME', () => {
+    const result = transformStatement(
+      "EXEC CICS ASKTIME ABSTIME(WS-TIME) END-EXEC"
+    );
+    expect(result).toContain('wsTime');
+    expect(result).toContain('System.currentTimeMillis');
+  });
+
+  it('transforms EXEC CICS WRITEQ TS', () => {
+    const result = transformStatement(
+      "EXEC CICS WRITEQ TS QUEUE('MYQUEUE') FROM(WS-DATA) END-EXEC"
+    );
+    expect(result).toContain('cicsTS.write');
+    expect(result).toContain('MYQUEUE');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms EXEC CICS READQ TS', () => {
+    const result = transformStatement(
+      "EXEC CICS READQ TS QUEUE('MYQUEUE') INTO(WS-DATA) END-EXEC"
+    );
+    expect(result).toContain('cicsTS.read');
+    expect(result).toContain('MYQUEUE');
+    expect(result).toContain('wsData');
+  });
+
+  it('transforms EXEC CICS DELETEQ TS', () => {
+    const result = transformStatement(
+      "EXEC CICS DELETEQ TS QUEUE('MYQUEUE') END-EXEC"
+    );
+    expect(result).toContain('cicsTS.delete');
+    expect(result).toContain('MYQUEUE');
+  });
+
+  it('transforms EXEC CICS HANDLE CONDITION', () => {
+    const result = transformStatement(
+      "EXEC CICS HANDLE CONDITION NOTFND(HANDLE-NOTFND) END-EXEC"
+    );
+    expect(result).toContain('HANDLE CONDITION NOTFND');
+    expect(result).toContain('handleNotfnd');
+  });
+
+  it('transforms EXEC CICS IGNORE CONDITION', () => {
+    const result = transformStatement(
+      "EXEC CICS IGNORE CONDITION NOTFND END-EXEC"
+    );
+    expect(result).toContain('IGNORE CONDITION NOTFND');
+  });
 });
 
 describe('PERFORM VARYING multi-level transformations', () => {
@@ -1387,5 +1489,44 @@ describe('Legacy statement transformations', () => {
     const result = transformStatement('ALTER MAIN-PARA TO PROCEED TO ERROR-PARA');
     expect(result).toContain('ALTER');
     expect(result).toContain('legacy');
+  });
+});
+
+describe('Performance optimization - caching', () => {
+  beforeEach(() => {
+    clearTransformCache();
+  });
+
+  it('caches transformation results', () => {
+    const statement = 'DISPLAY "TEST"';
+    
+    // First call - populates cache
+    const result1 = transformStatement(statement);
+    const stats1 = getTransformCacheStats();
+    expect(stats1.size).toBeGreaterThan(0);
+    
+    // Second call - should use cache
+    const result2 = transformStatement(statement);
+    expect(result1).toBe(result2);
+  });
+
+  it('returns correct cache stats', () => {
+    clearTransformCache();
+    const stats = getTransformCacheStats();
+    expect(stats.size).toBe(0);
+    expect(stats.maxSize).toBe(10000);
+  });
+
+  it('clears cache correctly', () => {
+    transformStatement('DISPLAY "HELLO"');
+    transformStatement('MOVE A TO B');
+    
+    const statsBefore = getTransformCacheStats();
+    expect(statsBefore.size).toBeGreaterThan(0);
+    
+    clearTransformCache();
+    
+    const statsAfter = getTransformCacheStats();
+    expect(statsAfter.size).toBe(0);
   });
 });

@@ -9,17 +9,25 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { convert, type ConversionOptions, type ErrorInfo } from '@cobol2java/core';
 
+// Diagnostics collection for validation errors
+let diagnosticCollection: vscode.DiagnosticCollection;
+
 /**
  * Extension activation
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log('COBOL2Java extension is now active');
 
+  // Create diagnostics collection
+  diagnosticCollection = vscode.languages.createDiagnosticCollection('cobol2java');
+  context.subscriptions.push(diagnosticCollection);
+
   // Register commands
   context.subscriptions.push(
     vscode.commands.registerCommand('cobol2java.convert', handleConvert),
     vscode.commands.registerCommand('cobol2java.convertWithCopilot', handleConvertWithCopilot),
-    vscode.commands.registerCommand('cobol2java.validate', handleValidate)
+    vscode.commands.registerCommand('cobol2java.validate', handleValidate),
+    vscode.commands.registerCommand('cobol2java.previewStatement', handlePreviewStatement)
   );
 
   // Register code lens provider for COBOL files
@@ -29,12 +37,39 @@ export function activate(context: vscode.ExtensionContext) {
       new CobolCodeLensProvider()
     )
   );
+
+  // Register hover provider for COBOL files
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(
+      { language: 'cobol', scheme: 'file' },
+      new CobolHoverProvider()
+    )
+  );
+
+  // Auto-validate on save
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      if (document.languageId === 'cobol') {
+        validateAndUpdateDiagnostics(document);
+      }
+    })
+  );
+
+  // Validate open COBOL files
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument((document) => {
+      if (document.languageId === 'cobol') {
+        validateAndUpdateDiagnostics(document);
+      }
+    })
+  );
 }
 
 /**
  * Extension deactivation
  */
 export function deactivate() {
+  diagnosticCollection?.dispose();
   console.log('COBOL2Java extension is now deactivated');
 }
 
@@ -191,4 +226,167 @@ class CobolCodeLensProvider implements vscode.CodeLensProvider {
 
     return lenses;
   }
+}
+
+/**
+ * Hover Provider for COBOL files - shows Java preview on hover
+ */
+class CobolHoverProvider implements vscode.HoverProvider {
+  async provideHover(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): Promise<vscode.Hover | undefined> {
+    const line = document.lineAt(position.line).text.trim();
+    
+    // Skip comments and empty lines
+    if (line.startsWith('*') || line.length === 0) {
+      return undefined;
+    }
+
+    // Get the statement for preview
+    const statementPatterns = [
+      /^(MOVE\s+.+)/i,
+      /^(ADD\s+.+)/i,
+      /^(SUBTRACT\s+.+)/i,
+      /^(MULTIPLY\s+.+)/i,
+      /^(DIVIDE\s+.+)/i,
+      /^(COMPUTE\s+.+)/i,
+      /^(DISPLAY\s+.+)/i,
+      /^(PERFORM\s+.+)/i,
+      /^(IF\s+.+)/i,
+      /^(EVALUATE\s+.+)/i,
+    ];
+
+    for (const pattern of statementPatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        try {
+          const result = await convert(match[1] + '.', { llmProvider: 'none' });
+          if (result.java) {
+            const markdown = new vscode.MarkdownString();
+            markdown.appendCodeblock(result.java.substring(0, 500), 'java');
+            return new vscode.Hover(markdown);
+          }
+        } catch {
+          // Ignore conversion errors in hover
+        }
+        break;
+      }
+    }
+
+    return undefined;
+  }
+}
+
+/**
+ * Validate document and update diagnostics
+ */
+async function validateAndUpdateDiagnostics(document: vscode.TextDocument): Promise<void> {
+  const diagnostics: vscode.Diagnostic[] = [];
+  
+  try {
+    const source = document.getText();
+    const result = await convert(source, { llmProvider: 'none' });
+
+    // Convert errors to diagnostics
+    for (const error of result.errors) {
+      const line = (error.line ?? 1) - 1;
+      const range = new vscode.Range(
+        new vscode.Position(line, 0),
+        new vscode.Position(line, document.lineAt(line).text.length)
+      );
+      diagnostics.push(
+        new vscode.Diagnostic(
+          range,
+          `${error.code}: ${error.message}`,
+          vscode.DiagnosticSeverity.Error
+        )
+      );
+    }
+
+    // Convert warnings to diagnostics
+    for (const warning of result.warnings) {
+      const line = (warning.line ?? 1) - 1;
+      const validLine = Math.min(line, document.lineCount - 1);
+      const range = new vscode.Range(
+        new vscode.Position(validLine, 0),
+        new vscode.Position(validLine, document.lineAt(validLine).text.length)
+      );
+      diagnostics.push(
+        new vscode.Diagnostic(
+          range,
+          `${warning.code}: ${warning.message}`,
+          vscode.DiagnosticSeverity.Warning
+        )
+      );
+    }
+  } catch (err) {
+    // Add a general error if conversion fails completely
+    const range = new vscode.Range(0, 0, 0, 0);
+    diagnostics.push(
+      new vscode.Diagnostic(
+        range,
+        `Validation error: ${err}`,
+        vscode.DiagnosticSeverity.Error
+      )
+    );
+  }
+
+  diagnosticCollection.set(document.uri, diagnostics);
+}
+
+/**
+ * Handle preview statement command (for code actions)
+ */
+async function handlePreviewStatement() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage('No active editor');
+    return;
+  }
+
+  const line = editor.document.lineAt(editor.selection.active.line).text;
+  try {
+    const result = await convert(line + '.', { llmProvider: 'none' });
+    
+    const panel = vscode.window.createWebviewPanel(
+      'cobol2javaPreview',
+      'Java Preview',
+      vscode.ViewColumn.Beside,
+      {}
+    );
+
+    panel.webview.html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Consolas', monospace; padding: 16px; }
+          pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; }
+          h3 { color: #569cd6; }
+        </style>
+      </head>
+      <body>
+        <h3>COBOL Statement:</h3>
+        <pre>${escapeHtml(line)}</pre>
+        <h3>Java Translation:</h3>
+        <pre>${escapeHtml(result.java)}</pre>
+      </body>
+      </html>
+    `;
+  } catch (err) {
+    vscode.window.showErrorMessage(`Preview failed: ${err}`);
+  }
+}
+
+/**
+ * Escape HTML for webview
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

@@ -21,6 +21,8 @@ export interface GeneratorOptions {
   springBoot: boolean;
   /** Generate Spring Batch compatible code (tasklet/job) */
   springBatch: boolean;
+  /** Generate data validation helpers */
+  generateValidation?: boolean;
   /** LLM client for advanced transformations */
   llmClient?: LLMClient;
 }
@@ -37,6 +39,8 @@ export interface GeneratedCode {
   warnings: ErrorInfo[];
   /** Spring Batch job configuration (if springBatch is true) */
   batchConfig?: string;
+  /** Validation helper class (if generateValidation is true) */
+  validationHelper?: string;
 }
 
 /**
@@ -66,11 +70,17 @@ export class JavaGenerator {
       ? this.generateBatchConfig(className)
       : undefined;
 
+    // Generate validation helper if generateValidation is enabled
+    const validationHelper = this.options.generateValidation
+      ? this.generateValidationHelper(ast.dataItems, className)
+      : undefined;
+
     return {
       code,
       className,
       warnings,
       batchConfig,
+      validationHelper,
     };
   }
 
@@ -522,6 +532,142 @@ export class JavaGenerator {
     lines.push('');
     
     return lines.join('\n');
+  }
+
+  /**
+   * Generate validation helper class based on data items' PIC clauses
+   */
+  private generateValidationHelper(dataItems: DataItem[], className: string): string {
+    const lines: string[] = [];
+    const validatorClassName = `${className}Validator`;
+
+    lines.push(`package ${this.options.packageName};`);
+    lines.push('');
+    lines.push('import java.util.ArrayList;');
+    lines.push('import java.util.List;');
+    lines.push('import java.util.regex.Pattern;');
+    lines.push('');
+    lines.push('/**');
+    lines.push(` * Validation helper for ${className}`);
+    lines.push(' * Generated from COBOL PIC clause definitions');
+    lines.push(' */');
+    lines.push(`public class ${validatorClassName} {`);
+    lines.push('');
+    lines.push('    private final List<String> errors = new ArrayList<>();');
+    lines.push('');
+
+    // Generate validation methods for each data item
+    for (const item of dataItems) {
+      if (item.pic && item.level !== 88) {
+        const methodLines = this.generateValidationMethod(item);
+        lines.push(...methodLines);
+      }
+    }
+
+    // Generate validateAll method
+    lines.push('    /**');
+    lines.push('     * Validate all fields and return errors');
+    lines.push('     */');
+    lines.push(`    public List<String> validateAll(${className} data) {`);
+    lines.push('        errors.clear();');
+    for (const item of dataItems) {
+      if (item.pic && item.level !== 88) {
+        const fieldName = toJavaName(item.name);
+        lines.push(`        validate${this.capitalize(fieldName)}(data.${fieldName});`);
+      }
+    }
+    lines.push('        return new ArrayList<>(errors);');
+    lines.push('    }');
+    lines.push('');
+
+    // Generate helper methods
+    lines.push('    private void addError(String field, String message) {');
+    lines.push('        errors.add(field + ": " + message);');
+    lines.push('    }');
+    lines.push('');
+
+    lines.push('    /**');
+    lines.push('     * Check if validation passed');
+    lines.push('     */');
+    lines.push('    public boolean isValid() {');
+    lines.push('        return errors.isEmpty();');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generate validation method for a single data item based on PIC clause
+   */
+  private generateValidationMethod(item: DataItem): string[] {
+    const lines: string[] = [];
+    const fieldName = toJavaName(item.name);
+    const methodName = `validate${this.capitalize(fieldName)}`;
+    const javaType = mapDataType(item.pic!);
+    
+    lines.push('    /**');
+    lines.push(`     * Validate ${fieldName} based on PIC ${item.pic}`);
+    lines.push('     */');
+    lines.push(`    public boolean ${methodName}(${javaType} value) {`);
+
+    const pic = item.pic!.toUpperCase();
+    
+    // Parse PIC clause for validation
+    if (pic.includes('X') || pic.includes('A')) {
+      // String type validation
+      const length = this.extractPicLength(pic);
+      if (length > 0) {
+        lines.push(`        if (value != null && value.length() > ${length}) {`);
+        lines.push(`            addError("${fieldName}", "Maximum length is ${length}");`);
+        lines.push('            return false;');
+        lines.push('        }');
+      }
+      if (pic.includes('A')) {
+        lines.push('        if (value != null && !value.matches("^[a-zA-Z ]*$")) {');
+        lines.push(`            addError("${fieldName}", "Must contain only alphabetic characters");`);
+        lines.push('            return false;');
+        lines.push('        }');
+      }
+    } else if (pic.includes('9') || pic.includes('S')) {
+      // Numeric validation
+      const length = this.extractPicLength(pic.replace(/[SV\-.]/g, ''));
+      const isSigned = pic.includes('S');
+      const hasDecimal = pic.includes('V') || pic.includes('.');
+      
+      if (!hasDecimal && javaType === 'int') {
+        const maxVal = Math.pow(10, length) - 1;
+        const minVal = isSigned ? -maxVal : 0;
+        lines.push(`        if (value < ${minVal} || value > ${maxVal}) {`);
+        lines.push(`            addError("${fieldName}", "Value must be between ${minVal} and ${maxVal}");`);
+        lines.push('            return false;');
+        lines.push('        }');
+      }
+    }
+
+    lines.push('        return true;');
+    lines.push('    }');
+    lines.push('');
+
+    return lines;
+  }
+
+  /**
+   * Extract length from PIC clause
+   */
+  private extractPicLength(pic: string): number {
+    // Handle PIC X(10) or PIC 9(5)
+    const matchParen = pic.match(/[X9A]\((\d+)\)/i);
+    if (matchParen) {
+      return parseInt(matchParen[1]!, 10);
+    }
+    // Handle PIC XXXXX or PIC 99999
+    const matchRepeat = pic.match(/([X9A]+)/i);
+    if (matchRepeat) {
+      return matchRepeat[1]!.length;
+    }
+    return 0;
   }
 
   /**

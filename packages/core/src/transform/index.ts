@@ -14,6 +14,8 @@ export {
   parseIfStatement,
   setLevel88Context,
   transform88LevelCondition,
+  clearTransformCache,
+  getTransformCacheStats,
   type DataTypeMapping,
   type StatementRule,
   type IfBlock,

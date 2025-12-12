@@ -473,6 +473,151 @@ cicsTransaction.transfer("${program}", ${commarea});`;
     },
     description: 'CICS transfer control',
   },
+  // CICS STARTBR - Start browse
+  {
+    pattern: /EXEC\s+CICS\s+STARTBR\s+FILE\s*\(\s*'([^']+)'\s*\)\s+RIDFLD\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      const key = toJavaName(match[2]!);
+      return `// CICS STARTBR
+${toJavaName(file)}Browser = cicsFile.startBrowse("${file}", ${key});`;
+    },
+    description: 'CICS start browse',
+  },
+  // CICS READNEXT - Read next in browse
+  {
+    pattern: /EXEC\s+CICS\s+READNEXT\s+FILE\s*\(\s*'([^']+)'\s*\)\s+INTO\s*\(\s*(\w[\w-]*)\s*\)\s+RIDFLD\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      const into = toJavaName(match[2]!);
+      const key = toJavaName(match[3]!);
+      return `// CICS READNEXT
+${into} = ${toJavaName(file)}Browser.readNext(); ${key} = ${toJavaName(file)}Browser.getCurrentKey();`;
+    },
+    description: 'CICS read next',
+  },
+  // CICS READPREV - Read previous in browse
+  {
+    pattern: /EXEC\s+CICS\s+READPREV\s+FILE\s*\(\s*'([^']+)'\s*\)\s+INTO\s*\(\s*(\w[\w-]*)\s*\)\s+RIDFLD\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      const into = toJavaName(match[2]!);
+      const key = toJavaName(match[3]!);
+      return `// CICS READPREV
+${into} = ${toJavaName(file)}Browser.readPrev(); ${key} = ${toJavaName(file)}Browser.getCurrentKey();`;
+    },
+    description: 'CICS read previous',
+  },
+  // CICS ENDBR - End browse
+  {
+    pattern: /EXEC\s+CICS\s+ENDBR\s+FILE\s*\(\s*'([^']+)'\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const file = match[1]!;
+      return `// CICS ENDBR
+${toJavaName(file)}Browser.endBrowse();`;
+    },
+    description: 'CICS end browse',
+  },
+  // CICS GETMAIN - Allocate memory
+  {
+    pattern: /EXEC\s+CICS\s+GETMAIN\s+SET\s*\(\s*(\w[\w-]*)\s*\)\s+LENGTH\s*\(\s*(\w[\w-]*|\d+)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const ptr = toJavaName(match[1]!);
+      const length = match[2]!.match(/^\d+$/) ? match[2] : toJavaName(match[2]!);
+      return `// CICS GETMAIN
+${ptr} = new byte[${length}];`;
+    },
+    description: 'CICS allocate memory',
+  },
+  // CICS FREEMAIN - Free memory
+  {
+    pattern: /EXEC\s+CICS\s+FREEMAIN\s+DATA\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const ptr = toJavaName(match[1]!);
+      return `// CICS FREEMAIN
+${ptr} = null; // Memory released`;
+    },
+    description: 'CICS free memory',
+  },
+  // CICS ASKTIME - Get current time
+  {
+    pattern: /EXEC\s+CICS\s+ASKTIME(?:\s+ABSTIME\s*\(\s*(\w[\w-]*)\s*\))?(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const abstime = match[1] ? toJavaName(match[1]) : 'eibtime';
+      return `// CICS ASKTIME
+${abstime} = System.currentTimeMillis();`;
+    },
+    description: 'CICS get time',
+  },
+  // CICS FORMATTIME - Format time
+  {
+    pattern: /EXEC\s+CICS\s+FORMATTIME\s+ABSTIME\s*\(\s*(\w[\w-]*)\s*\)(?:\s+DATESEP(?:\s*\(\s*'([^']+)'\s*\))?)?(?:\s+TIMESEP(?:\s*\(\s*'([^']+)'\s*\))?)?(?:\s+DATE\s*\(\s*(\w[\w-]*)\s*\))?(?:\s+TIME\s*\(\s*(\w[\w-]*)\s*\))?(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const abstime = toJavaName(match[1]!);
+      const dateSep = match[2] || '-';
+      const timeSep = match[3] || ':';
+      const dateVar = match[4] ? toJavaName(match[4]) : null;
+      const timeVar = match[5] ? toJavaName(match[5]) : null;
+      const lines: string[] = ['// CICS FORMATTIME'];
+      if (dateVar) lines.push(`${dateVar} = formatDate(${abstime}, "${dateSep}");`);
+      if (timeVar) lines.push(`${timeVar} = formatTime(${abstime}, "${timeSep}");`);
+      return lines.join('\n');
+    },
+    description: 'CICS format time',
+  },
+  // CICS WRITEQ TS - Write to temporary storage
+  {
+    pattern: /EXEC\s+CICS\s+WRITEQ\s+TS\s+QUEUE\s*\(\s*'([^']+)'\s*\)\s+FROM\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const queue = match[1]!;
+      const from = toJavaName(match[2]!);
+      return `// CICS WRITEQ TS
+cicsTS.write("${queue}", ${from});`;
+    },
+    description: 'CICS write to TS queue',
+  },
+  // CICS READQ TS - Read from temporary storage
+  {
+    pattern: /EXEC\s+CICS\s+READQ\s+TS\s+QUEUE\s*\(\s*'([^']+)'\s*\)\s+INTO\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const queue = match[1]!;
+      const into = toJavaName(match[2]!);
+      return `// CICS READQ TS
+${into} = cicsTS.read("${queue}");`;
+    },
+    description: 'CICS read from TS queue',
+  },
+  // CICS DELETEQ TS - Delete temporary storage queue
+  {
+    pattern: /EXEC\s+CICS\s+DELETEQ\s+TS\s+QUEUE\s*\(\s*'([^']+)'\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const queue = match[1]!;
+      return `// CICS DELETEQ TS
+cicsTS.delete("${queue}");`;
+    },
+    description: 'CICS delete TS queue',
+  },
+  // CICS HANDLE CONDITION - Error handling
+  {
+    pattern: /EXEC\s+CICS\s+HANDLE\s+CONDITION\s+(\w+)\s*\(\s*(\w[\w-]*)\s*\)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const condition = match[1]!;
+      const label = toJavaName(match[2]!);
+      return `// CICS HANDLE CONDITION ${condition}
+// Error handler: ${condition} -> ${label}()`;
+    },
+    description: 'CICS handle condition',
+  },
+  // CICS IGNORE CONDITION
+  {
+    pattern: /EXEC\s+CICS\s+IGNORE\s+CONDITION\s+(\w+)(.*)?\s*END-EXEC/gi,
+    transform: (match) => {
+      const condition = match[1]!;
+      return `// CICS IGNORE CONDITION ${condition}
+// Ignoring: ${condition}`;
+    },
+    description: 'CICS ignore condition',
+  },
   {
     pattern: /EXEC\s+CICS\s+(.+?)\s+END-EXEC/gi,
     transform: (match) => {
@@ -2780,21 +2925,59 @@ export function transformExpression(cobolExpr: string): string {
 }
 
 /**
- * Transform a COBOL statement to Java
+ * Statement transformation cache for performance optimization
+ */
+const statementCache = new Map<string, string | null>();
+const CACHE_MAX_SIZE = 10000;
+
+/**
+ * Clear the statement transformation cache
+ */
+export function clearTransformCache(): void {
+  statementCache.clear();
+}
+
+/**
+ * Get cache statistics
+ */
+export function getTransformCacheStats(): { size: number; maxSize: number } {
+  return { size: statementCache.size, maxSize: CACHE_MAX_SIZE };
+}
+
+/**
+ * Transform a COBOL statement to Java (with caching for performance)
  */
 export function transformStatement(cobolStatement: string): string | null {
   const trimmed = cobolStatement.trim();
+  
+  // Check cache first
+  if (statementCache.has(trimmed)) {
+    return statementCache.get(trimmed) ?? null;
+  }
+  
+  let result: string | null = null;
   
   for (const rule of STATEMENT_RULES) {
     // Reset regex lastIndex for global patterns
     rule.pattern.lastIndex = 0;
     const match = rule.pattern.exec(trimmed);
     if (match) {
-      return rule.transform(match);
+      result = rule.transform(match);
+      break;
     }
   }
   
-  return null; // No matching rule
+  // Store in cache (with eviction if too large)
+  if (statementCache.size >= CACHE_MAX_SIZE) {
+    // Simple eviction: clear oldest 20%
+    const keysToDelete = Array.from(statementCache.keys()).slice(0, CACHE_MAX_SIZE / 5);
+    for (const key of keysToDelete) {
+      statementCache.delete(key);
+    }
+  }
+  statementCache.set(trimmed, result);
+  
+  return result;
 }
 
 /**
