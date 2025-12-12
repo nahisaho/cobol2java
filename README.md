@@ -4,9 +4,9 @@
 
 **COBOL から Java への変換ツール - LLM アシスト付き**
 
-[![CI](https://github.com/your-org/cobol2java/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/cobol2java/actions/workflows/ci.yml)
-[![Security](https://github.com/your-org/cobol2java/actions/workflows/security.yml/badge.svg)](https://github.com/your-org/cobol2java/actions/workflows/security.yml)
-[![codecov](https://codecov.io/gh/your-org/cobol2java/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/cobol2java)
+[![CI](https://github.com/nahisaho/cobol2java/actions/workflows/ci.yml/badge.svg)](https://github.com/nahisaho/cobol2java/actions/workflows/ci.yml)
+[![Security](https://github.com/nahisaho/cobol2java/actions/workflows/security.yml/badge.svg)](https://github.com/nahisaho/cobol2java/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/nahisaho/cobol2java/branch/main/graph/badge.svg)](https://codecov.io/gh/nahisaho/cobol2java)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Tests](https://img.shields.io/badge/tests-643%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25-green)
@@ -54,7 +54,7 @@ packages/
 ### インストール
 
 \`\`\`bash
-git clone https://github.com/your-org/cobol2java.git
+git clone https://github.com/nahisaho/cobol2java.git
 cd cobol2java
 pnpm install
 pnpm build

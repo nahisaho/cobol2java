@@ -205,7 +205,7 @@ serde_json = "1.0"
 
 ```bash
 # リポジトリクローン
-git clone https://github.com/your-org/COBOL2Java.git
+git clone https://github.com/nahisaho/COBOL2Java.git
 cd COBOL2Java
 
 # 依存関係インストール

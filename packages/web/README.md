@@ -62,7 +62,7 @@ pnpm build
 npx @vscode/vsce package
 
 # VS Code にインストール
-code --install-extension cobol2java-0.1.0.vsix
+code --install-extension cobol2java-0.3.0.vsix
 ```
 
 ### マーケットプレイスからインストール (将来予定)

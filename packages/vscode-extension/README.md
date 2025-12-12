@@ -34,7 +34,7 @@ COBOLファイル（.cob, .cbl, .cobol, .cpy）に対応した構文ハイライ
 ### VSIXから
 
 ```bash
-code --install-extension cobol2java-0.1.0.vsix
+code --install-extension cobol2java-0.3.0.vsix
 ```
 
 ## 使い方

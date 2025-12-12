@@ -49,7 +49,7 @@ npm install @cobol2java/core
 ### ソースからビルド
 
 ```bash
-git clone https://github.com/your-org/cobol2java.git
+git clone https://github.com/nahisaho/cobol2java.git
 cd cobol2java
 pnpm install
 pnpm build
@@ -174,7 +174,7 @@ pnpm dev
 ### インストール
 
 ```bash
-code --install-extension cobol2java-0.1.0.vsix
+code --install-extension cobol2java-0.3.0.vsix
 ```
 
 ### コマンド
@@ -358,8 +358,8 @@ cobol2java convert program.cob --log-level debug
 
 ## サポート
 
-- **GitHub Issues**: [https://github.com/your-org/cobol2java/issues](https://github.com/your-org/cobol2java/issues)
-- **ドキュメント**: [https://your-org.github.io/cobol2java](https://your-org.github.io/cobol2java)
+- **GitHub Issues**: [https://github.com/nahisaho/cobol2java/issues](https://github.com/nahisaho/cobol2java/issues)
+- **ドキュメント**: [https://nahisaho.github.io/cobol2java](https://nahisaho.github.io/cobol2java)
 
 ---
 

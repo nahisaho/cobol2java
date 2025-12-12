@@ -2,7 +2,7 @@
   "name": "cobol2java-vscode",
   "displayName": "COBOL2Java",
   "description": "COBOL to Java converter with syntax highlighting and conversion commands",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "cobol2java",
   "engines": {
     "vscode": "^1.85.0"

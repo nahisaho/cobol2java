@@ -18,7 +18,7 @@ function StatusBar({ result, isConverting }: StatusBarProps) {
     return (
       <footer className="status-bar">
         <div className="status-item">Ready</div>
-        <div className="status-item">COBOL2Java v0.1.0</div>
+        <div className="status-item">COBOL2Java v0.3.0</div>
       </footer>
     );
   }
