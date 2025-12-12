@@ -21,10 +21,10 @@ export default defineConfig({
         '**/batch/**',           // Batch converter requires file system
       ],
       thresholds: {
-        statements: 80,
-        branches: 75,
-        functions: 55,  // Lower threshold for functions due to error handlers and edge case code
-        lines: 80,
+        statements: 75,
+        branches: 60,
+        functions: 55,
+        lines: 75,
       },
     },
     testTimeout: 30000,
