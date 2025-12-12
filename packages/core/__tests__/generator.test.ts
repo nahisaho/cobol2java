@@ -172,6 +172,55 @@ describe('JavaGenerator', () => {
     });
   });
 
+  describe('REDEFINES generation', () => {
+    it('should generate accessor methods for REDEFINES', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. REDEFINES-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-DATE PIC X(8).
+        01 WS-DATE-NUM REDEFINES WS-DATE PIC 9(8).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator();
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('REDEFINES WS-DATE');
+      expect(result.code).toContain('getWsDateNum');
+      expect(result.code).toContain('setWsDateNum');
+    });
+
+    it('should handle group REDEFINES', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. GROUP-REDEFINES.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-RECORD.
+           05 WS-FIELD1 PIC X(10).
+           05 WS-FIELD2 PIC X(10).
+        01 WS-RECORD-ALT REDEFINES WS-RECORD.
+           05 WS-ALT1 PIC X(5).
+           05 WS-ALT2 PIC X(15).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator();
+      const result = await generator.generate(ast);
+
+      // Group redefines item should be parsed correctly
+      expect(result.code).toContain('WS-RECORD-ALT');
+      expect(result.code).toContain('wsAlt1');
+      expect(result.code).toContain('wsAlt2');
+    });
+  });
+
   describe('Spring Boot generation', () => {
     it('should generate @Service annotation', async () => {
       const source = `
@@ -325,6 +374,43 @@ describe('JavaGenerator', () => {
 
       expect(result.code).toContain('Spring Batch Tasklet');
       expect(result.code).toContain('Executes as a step in a batch job');
+    });
+
+    it('should generate batch job configuration', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. DAILY-BATCH.
+        PROCEDURE DIVISION.
+        MAIN.
+            DISPLAY "RUNNING".
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: true });
+      const result = await generator.generate(ast);
+
+      expect(result.batchConfig).toBeDefined();
+      expect(result.batchConfig).toContain('@Configuration');
+      expect(result.batchConfig).toContain('DailyBatchBatchConfig');
+      expect(result.batchConfig).toContain('dailyBatchJob()');
+      expect(result.batchConfig).toContain('dailyBatchStep()');
+      expect(result.batchConfig).toContain('JobBuilder');
+      expect(result.batchConfig).toContain('StepBuilder');
+    });
+
+    it('should not generate batch config when springBatch is false', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SIMPLE-PROGRAM.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBatch: false });
+      const result = await generator.generate(ast);
+
+      expect(result.batchConfig).toBeUndefined();
     });
   });
 });
