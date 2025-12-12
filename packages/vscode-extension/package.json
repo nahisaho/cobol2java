@@ -69,6 +69,36 @@
         "command": "cobol2java.showPreview",
         "title": "Preview Java Conversion",
         "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.showStructureInfo",
+        "title": "Show Structure Info",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.goToReferences",
+        "title": "Go to References",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.showMethodPreview",
+        "title": "Show Java Method Preview",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.extractToParagraph",
+        "title": "Extract to Paragraph",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.addJavaEquivalentComment",
+        "title": "Add Java Equivalent Comment",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.refreshCodeLens",
+        "title": "Refresh CodeLens",
+        "category": "COBOL2Java"
       }
     ],
     "menus": {

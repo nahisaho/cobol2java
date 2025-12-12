@@ -1,27 +1,103 @@
 import * as vscode from 'vscode';
 import { CobolParser, JavaGenerator, GeneratorOptions } from '@cobol2java/core';
+import {
+  CobolCodeLensProvider,
+  CobolHoverProvider,
+  CobolDiagnosticsProvider,
+  CobolCompletionProvider,
+  CobolCodeActionsProvider,
+} from './providers/index.js';
 
 let outputChannel: vscode.OutputChannel;
 let previewPanel: vscode.WebviewPanel | undefined;
+let diagnosticsProvider: CobolDiagnosticsProvider;
+let codeLensProvider: CobolCodeLensProvider;
 
 export function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel('COBOL2Java');
   outputChannel.appendLine('COBOL2Java extension activated');
+
+  // Initialize providers
+  diagnosticsProvider = new CobolDiagnosticsProvider();
+  codeLensProvider = new CobolCodeLensProvider();
+
+  // Register language features
+  const cobolSelector: vscode.DocumentSelector = { language: 'cobol', scheme: 'file' };
+
+  context.subscriptions.push(
+    // CodeLens
+    vscode.languages.registerCodeLensProvider(cobolSelector, codeLensProvider),
+    
+    // Hover
+    vscode.languages.registerHoverProvider(cobolSelector, new CobolHoverProvider()),
+    
+    // Completion
+    vscode.languages.registerCompletionItemProvider(
+      cobolSelector,
+      new CobolCompletionProvider(),
+      '.', ' '
+    ),
+    
+    // Code Actions
+    vscode.languages.registerCodeActionsProvider(
+      cobolSelector,
+      new CobolCodeActionsProvider(),
+      {
+        providedCodeActionKinds: CobolCodeActionsProvider.providedCodeActionKinds,
+      }
+    ),
+    
+    // Diagnostics provider
+    diagnosticsProvider
+  );
+
+  // Register document change listeners for diagnostics
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument((doc) => {
+      if (isCobolFile(doc)) {
+        diagnosticsProvider.analyze(doc);
+      }
+    }),
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (isCobolFile(e.document)) {
+        diagnosticsProvider.analyze(e.document);
+      }
+    }),
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      if (isCobolFile(doc)) {
+        diagnosticsProvider.clear(doc);
+      }
+    })
+  );
+
+  // Analyze all open COBOL documents
+  for (const doc of vscode.workspace.textDocuments) {
+    if (isCobolFile(doc)) {
+      diagnosticsProvider.analyze(doc);
+    }
+  }
 
   // Register commands
   context.subscriptions.push(
     vscode.commands.registerCommand('cobol2java.convert', convertCurrentFile),
     vscode.commands.registerCommand('cobol2java.convertToClipboard', convertToClipboard),
     vscode.commands.registerCommand('cobol2java.detectDialect', detectDialect),
-    vscode.commands.registerCommand('cobol2java.showPreview', showPreview)
+    vscode.commands.registerCommand('cobol2java.showPreview', showPreview),
+    vscode.commands.registerCommand('cobol2java.showStructureInfo', showStructureInfo),
+    vscode.commands.registerCommand('cobol2java.goToReferences', goToReferences),
+    vscode.commands.registerCommand('cobol2java.showMethodPreview', showMethodPreview),
+    vscode.commands.registerCommand('cobol2java.extractToParagraph', extractToParagraph),
+    vscode.commands.registerCommand('cobol2java.addJavaEquivalentComment', addJavaEquivalentComment),
+    vscode.commands.registerCommand('cobol2java.refreshCodeLens', () => codeLensProvider.refresh())
   );
 
-  outputChannel.appendLine('All commands registered');
+  outputChannel.appendLine('All commands and providers registered');
 }
 
 export function deactivate() {
   outputChannel?.dispose();
   previewPanel?.dispose();
+  diagnosticsProvider?.dispose();
 }
 
 /**
@@ -445,4 +521,207 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Show structure info (from CodeLens)
+ */
+async function showStructureInfo(structure: { type: string; name: string; line: number }): Promise<void> {
+  const info = getStructureDescription(structure);
+  vscode.window.showInformationMessage(info);
+}
+
+function getStructureDescription(structure: { type: string; name: string }): string {
+  const descriptions: Record<string, Record<string, string>> = {
+    division: {
+      IDENTIFICATION: 'プログラムの識別情報を定義します → Java: クラス定義',
+      ENVIRONMENT: '環境設定とファイル制御を定義します → Java: リソース設定',
+      DATA: 'データ項目を定義します → Java: フィールド定義',
+      PROCEDURE: '処理ロジックを定義します → Java: メソッド定義',
+    },
+  };
+
+  const desc = descriptions[structure.type]?.[structure.name.toUpperCase()];
+  return desc || `${structure.name} ${structure.type}`;
+}
+
+/**
+ * Go to references (from CodeLens)
+ */
+async function goToReferences(name: string, uri: vscode.Uri): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(uri);
+  const text = document.getText();
+  
+  // Find all PERFORM references
+  const pattern = new RegExp(`PERFORM\\s+${name}(?:\\s|$)`, 'gi');
+  const locations: vscode.Location[] = [];
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const pos = document.positionAt(match.index);
+    locations.push(new vscode.Location(uri, pos));
+  }
+
+  if (locations.length === 0) {
+    vscode.window.showInformationMessage(`${name}への参照は見つかりませんでした`);
+    return;
+  }
+
+  // Show peek view with references
+  await vscode.commands.executeCommand(
+    'editor.action.showReferences',
+    uri,
+    locations[0]?.range.start || new vscode.Position(0, 0),
+    locations
+  );
+}
+
+/**
+ * Show method preview (from CodeLens)
+ */
+async function showMethodPreview(paragraphName: string): Promise<void> {
+  const javaMethodName = paragraphName
+    .toLowerCase()
+    .split('-')
+    .map((part, i) => i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
+  const preview = `/**
+ * Converted from COBOL paragraph: ${paragraphName}
+ */
+private void ${javaMethodName}() {
+    // TODO: Implement conversion
+}`;
+
+  // Show in information message with copy option
+  const action = await vscode.window.showInformationMessage(
+    `${paragraphName} → ${javaMethodName}()`,
+    'コピー'
+  );
+
+  if (action === 'コピー') {
+    await vscode.env.clipboard.writeText(preview);
+    vscode.window.showInformationMessage('Javaメソッド定義をコピーしました');
+  }
+}
+
+/**
+ * Extract selection to paragraph
+ */
+async function extractToParagraph(uri: vscode.Uri, range: vscode.Range): Promise<void> {
+  const name = await vscode.window.showInputBox({
+    prompt: '新しいパラグラフ名を入力',
+    placeHolder: 'NEW-PARAGRAPH',
+    validateInput: (value) => {
+      if (!value) return 'パラグラフ名を入力してください';
+      if (!/^[A-Z][A-Z0-9-]*$/.test(value.toUpperCase())) {
+        return '有効なCOBOL名を入力してください（英字で始まり、英数字とハイフン）';
+      }
+      return null;
+    },
+  });
+
+  if (!name) return;
+
+  const document = await vscode.workspace.openTextDocument(uri);
+  const selectedText = document.getText(range);
+
+  const edit = new vscode.WorkspaceEdit();
+
+  // Replace selection with PERFORM
+  edit.replace(uri, range, `PERFORM ${name.toUpperCase()}`);
+
+  // Find PROCEDURE DIVISION end to insert new paragraph
+  const text = document.getText();
+  const lines = text.split('\n');
+  let insertLine = lines.length - 1;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/STOP\s+RUN|GOBACK/i.test(lines[i] || '')) {
+      insertLine = i;
+      break;
+    }
+  }
+
+  // Insert new paragraph before STOP RUN
+  const newParagraph = `\n       ${name.toUpperCase()}.\n${selectedText}\n`;
+  edit.insert(uri, new vscode.Position(insertLine, 0), newParagraph);
+
+  await vscode.workspace.applyEdit(edit);
+  vscode.window.showInformationMessage(`パラグラフ ${name} を作成しました`);
+}
+
+/**
+ * Add Java equivalent comment
+ */
+async function addJavaEquivalentComment(uri: vscode.Uri, lineNumber: number): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(uri);
+  const line = document.lineAt(lineNumber).text;
+  
+  const javaEquivalent = getJavaEquivalent(line);
+  if (!javaEquivalent) {
+    vscode.window.showInformationMessage('この行のJava変換は見つかりませんでした');
+    return;
+  }
+
+  const edit = new vscode.WorkspaceEdit();
+  const commentLine = `      * Java: ${javaEquivalent}\n`;
+  edit.insert(uri, new vscode.Position(lineNumber, 0), commentLine);
+
+  await vscode.workspace.applyEdit(edit);
+}
+
+/**
+ * Get Java equivalent for COBOL statement
+ */
+function getJavaEquivalent(line: string): string | null {
+  const upper = line.toUpperCase().trim();
+
+  if (upper.startsWith('MOVE')) {
+    return 'variable = value;';
+  }
+  if (upper.startsWith('IF')) {
+    return 'if (condition) { ... }';
+  }
+  if (upper.startsWith('PERFORM')) {
+    return 'methodName();';
+  }
+  if (upper.startsWith('COMPUTE')) {
+    return 'result = expression;';
+  }
+  if (upper.startsWith('ADD')) {
+    return 'variable += value;';
+  }
+  if (upper.startsWith('SUBTRACT')) {
+    return 'variable -= value;';
+  }
+  if (upper.startsWith('MULTIPLY')) {
+    return 'result = a * b;';
+  }
+  if (upper.startsWith('DIVIDE')) {
+    return 'result = a / b;';
+  }
+  if (upper.startsWith('DISPLAY')) {
+    return 'System.out.println(...);';
+  }
+  if (upper.startsWith('ACCEPT')) {
+    return 'variable = scanner.nextLine();';
+  }
+  if (upper.startsWith('READ')) {
+    return 'record = reader.readLine();';
+  }
+  if (upper.startsWith('WRITE')) {
+    return 'writer.write(record);';
+  }
+  if (upper.startsWith('EVALUATE')) {
+    return 'switch (variable) { case ...: }';
+  }
+  if (upper.startsWith('STRING')) {
+    return 'result = StringBuilder.append(...);';
+  }
+  if (upper.startsWith('UNSTRING')) {
+    return 'parts = str.split(delimiter);';
+  }
+
+  return null;
 }
