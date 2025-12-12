@@ -70,7 +70,7 @@ pnpm test
 ### 3.1 プログラムによる変換
 
 ```typescript
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 const cobolSource = `
        IDENTIFICATION DIVISION.

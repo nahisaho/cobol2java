@@ -6,15 +6,15 @@ This workspace contains multiple packages for COBOL to Java conversion.
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| [@cobol2java/core](./core) | Core conversion library | ✅ 709 tests |
-| [@cobol2java/cli](./cli) | Command-line interface | ✅ 4 commands |
+| [cobol2java-core](./core) | Core conversion library | ✅ 709 tests |
+| [cobol2java-cli](./cli) | Command-line interface | ✅ 4 commands |
 | [cobol2java-vscode](./web) | VS Code extension | ✅ Ready |
 
 ## Quick Start
 
 ```bash
 # Install globally
-npm install -g @cobol2java/cli
+npm install -g cobol2java-cli
 
 # Convert a COBOL file
 cobol2java convert input.cbl -o output/

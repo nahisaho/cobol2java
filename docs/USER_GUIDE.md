@@ -40,10 +40,10 @@ COBOL2Javaは、レガシーCOBOLプログラムをモダンなJavaコードに�
 
 ```bash
 # CLIツール
-npm install -g @cobol2java/cli
+npm install -g cobol2java-cli
 
 # ライブラリとして使用
-npm install @cobol2java/core
+npm install cobol2java-core
 ```
 
 ### ソースからビルド
@@ -204,7 +204,7 @@ code --install-extension cobol2java-0.3.0.vsix
 ### 基本使用法
 
 ```typescript
-import { CobolParser, JavaGenerator } from '@cobol2java/core';
+import { CobolParser, JavaGenerator } from 'cobol2java-core';
 
 // パース
 const parser = new CobolParser();
@@ -225,7 +225,7 @@ console.log(result.className); // クラス名
 ### 便利な関数
 
 ```typescript
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 // ワンライナー変換
 const result = await convert(cobolSource, {
@@ -237,7 +237,7 @@ const result = await convert(cobolSource, {
 ### バッチ変換
 
 ```typescript
-import { batchConvert } from '@cobol2java/core';
+import { batchConvert } from 'cobol2java-core';
 
 const result = await batchConvert({
   inputDir: './cobol-src',
@@ -255,7 +255,7 @@ console.log(`成功: ${result.successCount}/${result.totalFiles}`);
 ### 差分レポート
 
 ```typescript
-import { generateDiffReport, formatDiffReportAsHtml } from '@cobol2java/core';
+import { generateDiffReport, formatDiffReportAsHtml } from 'cobol2java-core';
 
 const report = generateDiffReport(cobolSource, javaSource, ast);
 const html = formatDiffReportAsHtml(report);
@@ -264,7 +264,7 @@ const html = formatDiffReportAsHtml(report);
 ### Javadoc生成
 
 ```typescript
-import { generateJavadocs, insertJavadocsIntoCode } from '@cobol2java/core';
+import { generateJavadocs, insertJavadocsIntoCode } from 'cobol2java-core';
 
 const javadocs = generateJavadocs(ast, { japanese: true });
 const documentedCode = insertJavadocsIntoCode(javaCode, javadocs);
@@ -300,7 +300,7 @@ const documentedCode = insertJavadocsIntoCode(javaCode, javadocs);
 ### 自動検出
 
 ```typescript
-import { detectDialect } from '@cobol2java/core';
+import { detectDialect } from 'cobol2java-core';
 
 const dialect = detectDialect(cobolSource);
 // 'IBM Enterprise COBOL' | 'Micro Focus COBOL' | 'GnuCOBOL' | 'COBOL-85 Standard'

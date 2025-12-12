@@ -39,7 +39,7 @@ jobs:
         run: pnpm --filter cobol2java-core build
 
       - name: Build webapp for GitHub Pages
-        run: pnpm --filter @cobol2java/webapp build
+        run: pnpm --filter cobol2java-webapp build
         env:
           BASE_URL: /COBOL2Java/
 

@@ -36,7 +36,7 @@ import {
   sanitizeInput,
   withTimeout,
   SecurityLimits 
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 async function secureConvert(source: string): Promise<string> {
   // 1. 入力サニタイズ

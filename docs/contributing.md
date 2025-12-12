@@ -121,10 +121,10 @@ pnpm test
 pnpm test:coverage
 
 # Run specific package tests
-pnpm --filter @cobol2java/core test
+pnpm --filter cobol2java-core test
 
 # Run single test file
-pnpm --filter @cobol2java/core vitest run __tests__/parser.test.ts
+pnpm --filter cobol2java-core vitest run __tests__/parser.test.ts
 
 # Watch mode
 pnpm test:watch
@@ -158,7 +158,7 @@ describe('Parser', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 describe('E2E: Complete Program', () => {
   it('should convert full COBOL program', async () => {

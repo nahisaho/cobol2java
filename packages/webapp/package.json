@@ -1,5 +1,5 @@
 {
-  "name": "@cobol2java/webapp",
+  "name": "cobol2java-webapp",
   "version": "1.0.0",
   "description": "Web interface for COBOL to Java conversion",
   "private": true,

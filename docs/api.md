@@ -7,15 +7,15 @@ COBOL2Java provides a TypeScript/JavaScript API for converting COBOL source code
 ## Installation
 
 ```bash
-npm install @cobol2java/core
+npm install cobol2java-core
 # or
-pnpm add @cobol2java/core
+pnpm add cobol2java-core
 ```
 
 ## Quick Start
 
 ```typescript
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 const cobolSource = `
        IDENTIFICATION DIVISION.
@@ -161,7 +161,7 @@ interface ConversionMetadata {
 Parse COBOL source to AST.
 
 ```typescript
-import { parse } from '@cobol2java/core';
+import { parse } from 'cobol2java-core';
 
 const ast = parse(cobolSource);
 console.log(ast.programName); // 'HELLO-WORLD'
@@ -223,7 +223,7 @@ interface DataItem {
 Create a Java code generator.
 
 ```typescript
-import { createGenerator, parse } from '@cobol2java/core';
+import { createGenerator, parse } from 'cobol2java-core';
 
 const ast = parse(cobolSource);
 const generator = createGenerator({
@@ -250,7 +250,7 @@ interface GeneratorOptions {
 Apply transformation rules to AST.
 
 ```typescript
-import { transform, parse } from '@cobol2java/core';
+import { transform, parse } from 'cobol2java-core';
 
 const ast = parse(cobolSource);
 const result = transform(ast);
@@ -265,7 +265,7 @@ console.log(result.javaStatements);
 Create an LLM client for AI-assisted conversion.
 
 ```typescript
-import { createLLMClient } from '@cobol2java/core';
+import { createLLMClient } from 'cobol2java-core';
 
 const client = createLLMClient({
   provider: 'openai',
@@ -302,7 +302,7 @@ interface LLMClient {
 Format error for display.
 
 ```typescript
-import { formatError } from '@cobol2java/core';
+import { formatError } from 'cobol2java-core';
 
 const formatted = formatError(error);
 // "[ERROR] CVT001: Missing IDENTIFICATION DIVISION (line 1)"
@@ -313,7 +313,7 @@ const formatted = formatError(error);
 Create an error info object.
 
 ```typescript
-import { createError, ErrorSeverity } from '@cobol2java/core';
+import { createError, ErrorSeverity } from 'cobol2java-core';
 
 const error = createError('CVT001', 'Missing IDENTIFICATION DIVISION', {
   severity: ErrorSeverity.FATAL,
@@ -360,7 +360,7 @@ import type {
   CompletionOptions,
   GeneratorOptions,
   GeneratorResult,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 ```
 
 ## Example: Full Workflow
@@ -372,7 +372,7 @@ import {
   createGenerator,
   createLLMClient,
   formatError,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 async function convertWithLogging(cobolSource: string) {
   // Parse COBOL

@@ -15,7 +15,7 @@
   "theme": "default",
   "navigationLinks": {
     "GitHub": "https://github.com/your-org/cobol2java",
-    "npm": "https://www.npmjs.com/package/@cobol2java/core"
+    "npm": "https://www.npmjs.com/package/cobol2java-core"
   },
   "categorizeByGroup": true,
   "categoryOrder": [

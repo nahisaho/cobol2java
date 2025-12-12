@@ -163,7 +163,7 @@ COBOL2Java v1.0.0 marks the first production-ready release with comprehensive CO
 
 ### Added
 
-#### Core Library (@cobol2java/core)
+#### Core Library (cobol2java-core)
 - COBOL parser with support for:
   - IDENTIFICATION, ENVIRONMENT, DATA, PROCEDURE divisions
   - Data items (PIC X, PIC 9, COMP-3, BINARY, etc.)

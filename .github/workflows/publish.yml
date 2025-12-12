@@ -39,7 +39,7 @@ jobs:
       - name: Run tests
         run: pnpm test:run
 
-      - name: Publish @cobol2java/core
+      - name: Publish cobol2java-core
         run: |
           cd packages/core
           npm publish --provenance --access public

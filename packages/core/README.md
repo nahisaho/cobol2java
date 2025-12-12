@@ -1,4 +1,4 @@
-# @cobol2java/core
+# cobol2java-core
 
 COBOL to Java conversion core library.
 
@@ -23,13 +23,13 @@ COBOL to Java conversion core library.
 ## Installation
 
 ```bash
-npm install @cobol2java/core
+npm install cobol2java-core
 ```
 
 ## Usage
 
 ```typescript
-import { convert, ConversionOptions } from '@cobol2java/core';
+import { convert, ConversionOptions } from 'cobol2java-core';
 
 const cobolSource = `
   IDENTIFICATION DIVISION.
@@ -88,7 +88,7 @@ Convert COBOL source code to Java.
 The library includes built-in caching for transformation rules:
 
 ```typescript
-import { clearTransformCache, getTransformCacheStats } from '@cobol2java/core';
+import { clearTransformCache, getTransformCacheStats } from 'cobol2java-core';
 
 // Get cache statistics
 const stats = getTransformCacheStats();

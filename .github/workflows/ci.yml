@@ -136,7 +136,7 @@ jobs:
         run: pnpm --filter cobol2java-core build
 
       - name: Build webapp
-        run: pnpm --filter @cobol2java/webapp build
+        run: pnpm --filter cobol2java-webapp build
 
       - name: Upload webapp artifact
         uses: actions/upload-artifact@v4

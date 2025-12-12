@@ -63,7 +63,7 @@ COBOL→Java変換には以下の2つの処理が必要：
 
 ```
 packages/
-├── core/       # @cobol2java/core
+├── core/       # cobol2java-core
 ├── cli/        # cobol2java (bin)
 ├── parser/     # @cobol2java/parser
 └── web/        # @cobol2java/web

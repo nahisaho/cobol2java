@@ -17,14 +17,14 @@
 
 ```bash
 # インストール
-npm install @cobol2java/core
+npm install cobol2java-core
 
 # CLIインストール
-npm install -g @cobol2java/cli
+npm install -g cobol2java-cli
 ```
 
 ```typescript
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 const result = await convert(cobolSource, {
   packageName: 'com.example',

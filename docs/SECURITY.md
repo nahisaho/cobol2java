@@ -4,12 +4,12 @@ COBOL2Java プロジェクトのセキュリティガイドです。
 
 ## セキュリティモジュール
 
-`@cobol2java/core` には包括的なセキュリティ機能が含まれています。
+`cobol2java-core` には包括的なセキュリティ機能が含まれています。
 
 ### 入力バリデーション
 
 ```typescript
-import { validateInput, validateIdentifier, validateFilePath } from '@cobol2java/core';
+import { validateInput, validateIdentifier, validateFilePath } from 'cobol2java-core';
 
 // COBOL ソース入力のバリデーション
 const result = validateInput(cobolSource, {
@@ -38,7 +38,7 @@ import {
   sanitizeForJavaIdentifier,
   sanitizeForLog,
   redactSensitive
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // 入力のサニタイズ
 const cleanInput = sanitizeInput(rawInput, {
@@ -64,7 +64,7 @@ const safeOutput = redactSensitive(debugOutput);
 ### セキュリティリミット
 
 ```typescript
-import { checkLimits, DEFAULT_LIMITS, STRICT_LIMITS, withTimeout } from '@cobol2java/core';
+import { checkLimits, DEFAULT_LIMITS, STRICT_LIMITS, withTimeout } from 'cobol2java-core';
 
 // デフォルトリミットの確認
 const limitCheck = checkLimits(input);
@@ -180,7 +180,7 @@ const safeDebug = redactSensitive(JSON.stringify(config));
 - タイムアウト発生
 
 ```typescript
-import { sanitizeForLog, redactSensitive } from '@cobol2java/core';
+import { sanitizeForLog, redactSensitive } from 'cobol2java-core';
 
 function logConversion(input: string, result: ConversionResult) {
   const logEntry = {

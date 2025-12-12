@@ -56,7 +56,7 @@ class CobolParser {
 #### 使用例
 
 ```typescript
-import { CobolParser } from '@cobol2java/core';
+import { CobolParser } from 'cobol2java-core';
 
 const parser = new CobolParser();
 const ast = parser.parse(cobolSource);
@@ -157,7 +157,7 @@ interface LLMClient {
 ### OpenAI クライアント
 
 ```typescript
-import { OpenAIClient } from '@cobol2java/core';
+import { OpenAIClient } from 'cobol2java-core';
 
 // 基本的な使用
 const client = new OpenAIClient('your-api-key');
@@ -182,7 +182,7 @@ const azureClient = new OpenAIClient({
 ### Claude クライアント
 
 ```typescript
-import { ClaudeClient } from '@cobol2java/core';
+import { ClaudeClient } from 'cobol2java-core';
 
 const client = new ClaudeClient({
   apiKey: 'your-anthropic-key',
@@ -194,7 +194,7 @@ const client = new ClaudeClient({
 ### Ollama クライアント
 
 ```typescript
-import { OllamaClient } from '@cobol2java/core';
+import { OllamaClient } from 'cobol2java-core';
 
 const client = new OllamaClient({
   baseUrl: 'http://localhost:11434',
@@ -245,7 +245,7 @@ type ErrorSeverity = 'error' | 'warning' | 'info';
 COBOL 型を Java 型にマッピング。
 
 ```typescript
-import { TypeMapper } from '@cobol2java/core';
+import { TypeMapper } from 'cobol2java-core';
 
 const javaType = TypeMapper.mapPicToJava('9(5)V99');
 // => 'BigDecimal'
@@ -256,7 +256,7 @@ const javaType = TypeMapper.mapPicToJava('9(5)V99');
 COBOL ステートメントを Java に変換。
 
 ```typescript
-import { StatementTransformer } from '@cobol2java/core';
+import { StatementTransformer } from 'cobol2java-core';
 
 const transformer = new StatementTransformer();
 const javaCode = transformer.transform(cobolStatement);
@@ -271,7 +271,7 @@ const javaCode = transformer.transform(cobolStatement);
 入力サイズと複雑さの制限を設定。
 
 ```typescript
-import { SecurityLimits, checkLimits, withTimeout } from '@cobol2java/core';
+import { SecurityLimits, checkLimits, withTimeout } from 'cobol2java-core';
 
 // デフォルト制限
 const limits: SecurityLimits = {
@@ -308,7 +308,7 @@ import {
   validateInput, 
   validateIdentifier, 
   validateFilePath 
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // 入力検証
 const inputResult = validateInput(source, { maxSize: 1024 * 1024 });
@@ -336,7 +336,7 @@ import {
   sanitizeForJavaIdentifier,
   sanitizeForJavaPackage,
   redactSensitive
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // 制御文字除去
 const clean = sanitizeInput(dirtyInput);
@@ -367,7 +367,7 @@ const safe = redactSensitive('api_key=sk-abc123...');
 汎用キャッシュ（LRU/LFU/FIFO）。
 
 ```typescript
-import { Cache, AstCache, CodeCache } from '@cobol2java/core';
+import { Cache, AstCache, CodeCache } from 'cobol2java-core';
 
 // 基本キャッシュ
 const cache = new Cache<string>({
@@ -402,7 +402,7 @@ import {
   LineTransform,
   StringBuilder,
   streamToString
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // チャンク処理
 const processor = new ChunkedProcessor<string>({
@@ -447,7 +447,7 @@ import {
   globalProfiler,
   measureTime,
   ThroughputCalculator
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // 単純タイマー
 const timer = new Timer();
@@ -507,7 +507,7 @@ import {
   COBOL_ANALYSIS_TEMPLATE,
   COBOL2JAVA_TEMPLATE,
   JAVA_OPTIMIZATION_TEMPLATE,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // 利用可能なテンプレート一覧
 console.log(listTemplates());
@@ -545,7 +545,7 @@ console.log(userPrompt);
 import {
   createLLMClient,
   createEnhancedClient,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 // ベースクライアント作成
 const baseClient = createLLMClient({
@@ -586,7 +586,7 @@ client.clearCache();
 import {
   createLLMClient,
   createPipeline,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 
 const client = createLLMClient({
   provider: 'claude',
@@ -634,7 +634,7 @@ const { code, optimizedCode } = await pipeline.convertAndOptimize(cobolSource);
 JCL（Job Control Language）を解析してSpring Batch設定を生成。
 
 ```typescript
-import { JclParser } from '@cobol2java/core';
+import { JclParser } from 'cobol2java-core';
 
 const parser = new JclParser();
 const job = parser.parse(jclSource);
@@ -661,7 +661,7 @@ const springConfig = parser.generateSpringBatchConfig(job);
 埋め込みSQLの解析とSpring Data JPA変換。
 
 ```typescript
-import { DB2Parser } from '@cobol2java/core';
+import { DB2Parser } from 'cobol2java-core';
 
 const parser = new DB2Parser();
 const sqlStatements = parser.extractSql(cobolSource);
@@ -682,7 +682,7 @@ const entity = parser.generateJpaEntity(tableDef);
 IMS DL/I呼び出しの解析。
 
 ```typescript
-import { IMSParser } from '@cobol2java/core';
+import { IMSParser } from 'cobol2java-core';
 
 const parser = new IMSParser();
 const calls = parser.parseCalls(cobolSource);
@@ -703,7 +703,7 @@ for (const call of calls) {
 並列タスク処理。
 
 ```typescript
-import { WorkerPool, ParallelConverter } from '@cobol2java/core';
+import { WorkerPool, ParallelConverter } from 'cobol2java-core';
 
 // カスタムワーカープール
 const pool = new WorkerPool<string, string>(
@@ -730,7 +730,7 @@ const results = await converter.convert([source1, source2, source3]);
 大規模ファイル向けの増分パース。
 
 ```typescript
-import { IncrementalParser } from '@cobol2java/core';
+import { IncrementalParser } from 'cobol2java-core';
 
 const parser = new IncrementalParser(initialSource);
 
@@ -749,7 +749,7 @@ console.log(`バージョン: ${parser.getVersion()}`);
 オブジェクト再利用によるメモリ効率化。
 
 ```typescript
-import { PoolManager, withPooledStringBuilder } from '@cobol2java/core';
+import { PoolManager, withPooledStringBuilder } from 'cobol2java-core';
 
 // プール統計
 const stats = PoolManager.getStats();

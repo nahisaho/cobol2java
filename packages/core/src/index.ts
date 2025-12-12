@@ -1,5 +1,5 @@
 /**
- * @cobol2java/core
+ * cobol2java-core
  * 
  * Core library for COBOL to Java conversion
  */
@@ -19,7 +19,7 @@ export * from './performance/index.js';
 export * from './enterprise/index.js';
 
 // Benchmark module is Node.js only (uses fs/promises)
-// Import directly from '@cobol2java/core/benchmark' for CLI usage
+// Import directly from 'cobol2java-core/benchmark' for CLI usage
 export type {
   CobolEvalProblem,
   TestCase,

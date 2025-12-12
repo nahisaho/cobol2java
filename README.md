@@ -63,7 +63,7 @@ pnpm build
 ### CLI で変換
 
 ```bash
-pnpm --filter @cobol2java/cli start -- convert input.cob -o output.java
+pnpm --filter cobol2java-cli start -- convert input.cob -o output.java
 ```
 
 ### Webアプリで変換
@@ -76,7 +76,7 @@ pnpm dev
 ### プログラマティックAPI
 
 ```typescript
-import { CobolParser, JavaGenerator } from '@cobol2java/core';
+import { CobolParser, JavaGenerator } from 'cobol2java-core';
 
 const parser = new CobolParser();
 const ast = parser.parse(cobolSource);

@@ -34,7 +34,7 @@ pnpm cobol2java convert ./cobol-sources -o ./java-output
 ### プログラムでの使用
 
 ```typescript
-import { convert } from '@cobol2java/core';
+import { convert } from 'cobol2java-core';
 
 const cobolSource = `
        IDENTIFICATION DIVISION.
@@ -102,7 +102,7 @@ COBOL2Java は複数の COBOL 方言を自動検出し、適切に変換しま�
 - **COBOL-85**: 標準 ANSI COBOL
 
 ```typescript
-import { detectDialect } from '@cobol2java/core';
+import { detectDialect } from 'cobol2java-core';
 
 const dialectInfo = detectDialect(cobolSource);
 console.log(`検出された方言: ${dialectInfo.dialect}`);

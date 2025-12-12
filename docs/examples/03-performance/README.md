@@ -18,7 +18,7 @@ import {
   ThroughputCalculator,
   ChunkedProcessor,
   measureTimeAsync,
-} from '@cobol2java/core';
+} from 'cobol2java-core';
 import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 ```

@@ -67,7 +67,7 @@ packages/
 pnpm test
 
 # 特定パッケージのテスト
-pnpm --filter @cobol2java/core test
+pnpm --filter cobol2java-core test
 
 # ウォッチモード
 pnpm test:watch

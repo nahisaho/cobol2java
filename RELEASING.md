@@ -93,7 +93,7 @@ pnpm publish --access public
 
 ```bash
 # グローバルインストール
-npm install -g @cobol2java/cli
+npm install -g cobol2java-cli
 
 # 動作確認
 cobol2java --version
@@ -120,8 +120,8 @@ git tag -d v0.x.0
 git push origin :refs/tags/v0.x.0
 
 # npmから非推奨化
-npm deprecate @cobol2java/core@0.x.0 "問題の説明"
-npm deprecate @cobol2java/cli@0.x.0 "問題の説明"
+npm deprecate cobol2java-core@0.x.0 "問題の説明"
+npm deprecate cobol2java-cli@0.x.0 "問題の説明"
 ```
 
 ## チェックリスト

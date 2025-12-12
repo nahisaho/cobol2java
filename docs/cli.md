@@ -8,10 +8,10 @@ COBOL2Java provides a command-line interface for converting COBOL source files t
 
 ```bash
 # Install globally
-npm install -g @cobol2java/cli
+npm install -g cobol2java-cli
 
 # Or use npx
-npx @cobol2java/cli convert input.cbl
+npx cobol2java-cli convert input.cbl
 ```
 
 ## Commands
@@ -281,8 +281,8 @@ done
 # GitHub Actions workflow
 - name: Convert COBOL to Java
   run: |
-    npx @cobol2java/cli convert src/cobol/*.cbl -o src/java
-    npx @cobol2java/cli validate src/java/ --strict
+    npx cobol2java-cli convert src/cobol/*.cbl -o src/java
+    npx cobol2java-cli validate src/java/ --strict
 ```
 
 ### Generate HTML Report
