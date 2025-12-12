@@ -16,6 +16,7 @@ export * from './diff/index.js';
 export * from './javadoc/index.js';
 export * from './security/index.js';
 export * from './performance/index.js';
+export * from './enterprise/index.js';
 
 // Benchmark module is Node.js only (uses fs/promises)
 // Import directly from '@cobol2java/core/benchmark' for CLI usage
