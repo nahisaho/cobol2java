@@ -1,7 +1,7 @@
 # COBOL2Java コンセプト
 
-**Version**: 1.2.0  
-**Last Updated**: 2025-12-12
+**Version**: 1.3.0  
+**Last Updated**: 2025-12-13
 
 ---
 
@@ -30,7 +30,7 @@ COBOL2Javaは、ルールベースの確実な変換とLLM（大規模言語モ�
 │                  COBOL2Javaの解決策                          │
 ├─────────────────────────────────────────────────────────────┤
 │  🤖 LLM + 構文解析のハイブリッド変換                         │
-│  📐 130+ の変換ルールによる確実な構文変換                    │
+│  📐 200+ の変換ルールによる確実な構文変換                    │
 │  ✅ COBOLEval 146問による定量的品質保証                      │
 │  🔧 CI/CDパイプライン統合対応                                │
 │  🆓 オープンソースで導入障壁を低減                           │
@@ -68,10 +68,10 @@ COBOL2Javaは「ルールベース変換」と「LLM補助変換」を組み合�
 │  │   Rule-Based Transform   │  │    LLM-Assisted         │   │
 │  │   (確実な構文変換)       │  │    (複雑ロジック理解)   │   │
 │  │                          │  │                          │   │
-│  │  • 130+ Statement Rules  │  │  • OpenAI GPT-4o        │   │
-│  │  • 60+ Intrinsic Funcs   │  │  • Claude 3.5 Sonnet    │   │
+│  │  • 200+ Statement Rules  │  │  • OpenAI GPT-4o        │   │
+│  │  • 80+ Intrinsic Funcs   │  │  • Claude 3.5 Sonnet    │   │
 │  │  • 15+ Data Types        │  │  • Ollama (ローカル)    │   │
-│  │  • 8 Error Handlers      │  │  • GitHub Copilot       │   │
+│  │  • 20+ Error Handlers    │  │  • GitHub Copilot       │   │
 │  └─────────────────────────┘  └─────────────────────────┘   │
 └──────────────────────────────────────────────────────────────┘
                               │
@@ -118,7 +118,7 @@ COBOL2Javaは「ルールベース変換」と「LLM補助変換」を組み合�
 
 ## 3. 主要機能
 
-### 3.1 構文変換（130+ ルール）
+### 3.1 構文変換（200+ ルール）
 
 #### 基本ステートメント
 
@@ -162,15 +162,16 @@ while (!(wsCount > 10)) {
 }
 ```
 
-### 3.2 組込み関数（60+ 関数）
+### 3.2 組込み関数（80+ 関数）
 
 | カテゴリ | 関数例 |
 |---------|--------|
-| 文字列 | LENGTH, TRIM, UPPER-CASE, LOWER-CASE, REVERSE |
-| 数値 | NUMVAL, NUMVAL-C, ABS, SQRT, SIN, COS, LOG |
+| 文字列 | LENGTH, TRIM, UPPER-CASE, LOWER-CASE, REVERSE, CONCATENATE |
+| 数値 | NUMVAL, NUMVAL-C, ABS, SQRT, SIN, COS, TAN, LOG, LOG10 |
 | 日付 | CURRENT-DATE, INTEGER-OF-DATE, DATE-OF-INTEGER |
-| Unicode | ULENGTH, UPOS, USUBSTR |
-| その他 | ORD, CHAR, MOD, REM, FACTORIAL |
+| Unicode | ULENGTH, UPOS, USUBSTR, UVALID |
+| 統計 | MAX, MIN, SUM, MEAN, MEDIAN, VARIANCE, STANDARD-DEVIATION |
+| その他 | ORD, CHAR, MOD, REM, FACTORIAL, RANDOM |
 
 ### 3.3 データ型マッピング
 
@@ -222,6 +223,52 @@ try {
 } catch (ArithmeticException e) {
     System.out.println("Division overflow");
 }
+```
+
+### 3.5 オブジェクト指向COBOL
+
+```cobol
+*> OO-COBOL
+CLASS-ID. CUSTOMER-ACCOUNT INHERITS BASE-ACCOUNT.
+METHOD-ID. CALCULATE-INTEREST.
+  INVOKE SELF "GET-BALANCE" RETURNING WS-BALANCE.
+  COMPUTE WS-INTEREST = WS-BALANCE * WS-RATE.
+END METHOD.
+```
+
+```java
+// Java
+public class CustomerAccount extends BaseAccount {
+    public void calculateInterest() {
+        wsBalance = this.getBalance();
+        wsInterest = wsBalance.multiply(wsRate);
+    }
+}
+```
+
+### 3.6 埋め込みSQL/CICS
+
+```cobol
+*> Embedded SQL
+EXEC SQL
+    SELECT NAME, BALANCE 
+    INTO :WS-NAME, :WS-BALANCE
+    FROM CUSTOMERS WHERE ID = :WS-ID
+END-EXEC.
+
+*> CICS
+EXEC CICS RECEIVE MAP('MENU01') INTO(WS-DATA) END-EXEC.
+```
+
+```java
+// Java (JDBC)
+String sql = "SELECT NAME, BALANCE FROM CUSTOMERS WHERE ID = ?";
+PreparedStatement stmt = connection.prepareStatement(sql);
+stmt.setString(1, wsId);
+ResultSet rs = stmt.executeQuery();
+
+// Java (CICS Java API)
+Map<String, Object> wsData = cicsTransaction.receiveMap("MENU01");
 ```
 
 ---
