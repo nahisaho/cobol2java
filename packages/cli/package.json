@@ -1,6 +1,6 @@
 {
   "name": "@cobol2java/cli",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "CLI for COBOL to Java conversion",
   "type": "module",
   "bin": {

@@ -6,7 +6,7 @@ This workspace contains multiple packages for COBOL to Java conversion.
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| [@cobol2java/core](./core) | Core conversion library | ✅ 354 tests |
+| [@cobol2java/core](./core) | Core conversion library | ✅ 709 tests |
 | [@cobol2java/cli](./cli) | Command-line interface | ✅ 4 commands |
 | [cobol2java-vscode](./web) | VS Code extension | ✅ Ready |
 
