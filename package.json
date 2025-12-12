@@ -17,7 +17,7 @@
     "lint:fix": "eslint packages --ext .ts,.tsx --fix",
     "format": "prettier --write \"packages/**/*.{ts,tsx,json}\"",
     "clean": "pnpm -r clean",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm --filter @cobol2java/core build && pnpm -r typecheck",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch"
   },
