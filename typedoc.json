@@ -1,0 +1,44 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/cli/src/index.ts"
+  ],
+  "out": "docs/api",
+  "name": "COBOL2Java API Documentation",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "theme": "default",
+  "navigationLinks": {
+    "GitHub": "https://github.com/your-org/cobol2java",
+    "npm": "https://www.npmjs.com/package/@cobol2java/core"
+  },
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Parser",
+    "Generator",
+    "Transform",
+    "Dialect",
+    "Batch",
+    "Diff",
+    "Javadoc",
+    "CLI",
+    "Errors",
+    "*"
+  ],
+  "sort": ["source-order", "alphabetical"],
+  "visibilityFilters": {
+    "protected": true,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "plugin": [],
+  "searchInComments": true,
+  "cleanOutputDir": true
+}

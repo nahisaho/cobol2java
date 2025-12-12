@@ -8,7 +8,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
-      external: ['vscode'],
+      external: ['vscode', 'fs', 'path', 'glob', 'node:fs', 'node:path', 'node:url', 'node:events', 'node:stream', 'node:string_decoder', 'node:fs/promises'],
     },
   },
   server: {
@@ -19,5 +19,8 @@ export default defineConfig({
       // Provide empty stub for vscode module in browser
       vscode: '/src/stubs/vscode.ts',
     },
+  },
+  optimizeDeps: {
+    exclude: ['glob'],
   },
 });

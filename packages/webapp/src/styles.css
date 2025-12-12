@@ -310,6 +310,63 @@ body {
   color: var(--text-secondary);
 }
 
+/* File upload */
+.file-upload {
+  cursor: pointer;
+}
+
+/* History panel */
+.history-panel {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.history-item:hover {
+  background: var(--bg-primary);
+}
+
+.history-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.history-meta {
+  color: var(--text-secondary);
+}
+
+.history-time {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+/* Badge */
+.badge {
+  background: var(--accent);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* Small button */
+.btn-small {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .main {
@@ -323,5 +380,14 @@ body {
   
   .panel:last-child {
     border-bottom: none;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .options-group {
+    flex-wrap: wrap;
   }
 }

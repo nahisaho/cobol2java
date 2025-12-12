@@ -84,7 +84,91 @@ const SAMPLES: Record<string, string> = {
            DISPLAY "Score: " WS-SCORE " Grade: " WS-GRADE.
            STOP RUN.
 `,
+  'EXEC SQL': `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SQL-DEMO.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 WS-CUST-ID    PIC 9(5).
+       01 WS-CUST-NAME  PIC X(30).
+       01 WS-BALANCE    PIC 9(7)V99.
+
+       PROCEDURE DIVISION.
+       MAIN-PARAGRAPH.
+           MOVE 12345 TO WS-CUST-ID.
+           EXEC SQL
+               SELECT CUSTOMER_NAME, BALANCE
+               INTO :WS-CUST-NAME, :WS-BALANCE
+               FROM CUSTOMERS
+               WHERE CUSTOMER_ID = :WS-CUST-ID
+           END-EXEC.
+           DISPLAY "Customer: " WS-CUST-NAME.
+           DISPLAY "Balance: " WS-BALANCE.
+           EXEC SQL COMMIT END-EXEC.
+           STOP RUN.
+`,
+  'EXEC CICS': `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CICS-DEMO.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 WS-MAP-DATA   PIC X(100).
+       01 WS-COMM-AREA  PIC X(50).
+
+       PROCEDURE DIVISION.
+       MAIN-PARAGRAPH.
+           EXEC CICS SEND MAP('MAINMAP') MAPSET('MAINSET') ERASE END-EXEC.
+           EXEC CICS RECEIVE MAP('MAINMAP') MAPSET('MAINSET')
+               INTO(WS-MAP-DATA) END-EXEC.
+           EXEC CICS LINK PROGRAM('SUBPROG') COMMAREA(WS-COMM-AREA) END-EXEC.
+           EXEC CICS RETURN TRANSID('MAIN') COMMAREA(WS-COMM-AREA) END-EXEC.
+`,
+  'Batch Processing': `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. BATCH-PROCESS.
+
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT INPUT-FILE ASSIGN TO 'INPUT.DAT'
+               ORGANIZATION IS LINE SEQUENTIAL.
+           SELECT OUTPUT-FILE ASSIGN TO 'OUTPUT.DAT'
+               ORGANIZATION IS LINE SEQUENTIAL.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD INPUT-FILE.
+       01 INPUT-RECORD   PIC X(80).
+       FD OUTPUT-FILE.
+       01 OUTPUT-RECORD  PIC X(80).
+
+       WORKING-STORAGE SECTION.
+       01 WS-EOF         PIC 9 VALUE 0.
+       01 WS-COUNT       PIC 9(5) VALUE 0.
+
+       PROCEDURE DIVISION.
+       MAIN-PARAGRAPH.
+           OPEN INPUT INPUT-FILE OUTPUT OUTPUT-FILE.
+           PERFORM UNTIL WS-EOF = 1
+               READ INPUT-FILE INTO INPUT-RECORD
+                   AT END MOVE 1 TO WS-EOF
+                   NOT AT END
+                       ADD 1 TO WS-COUNT
+                       WRITE OUTPUT-RECORD FROM INPUT-RECORD
+               END-READ
+           END-PERFORM.
+           CLOSE INPUT-FILE OUTPUT-FILE.
+           DISPLAY "Processed " WS-COUNT " records.".
+           STOP RUN.
+`,
 };
+
+interface ConversionHistory {
+  id: number;
+  timestamp: Date;
+  programName: string;
+  linesConverted: number;
+  durationMs: number;
+}
 
 function App() {
   const [cobolSource, setCobolSource] = useState(SAMPLE_COBOL);
@@ -93,7 +177,11 @@ function App() {
   const [result, setResult] = useState<ConversionResult | null>(null);
   const [selectedSample, setSelectedSample] = useState('Hello World');
   const [springBoot, setSpringBoot] = useState(false);
+  const [springBatch, setSpringBatch] = useState(false);
+  const [generateValidation, setGenerateValidation] = useState(false);
   const [packageName, setPackageName] = useState('com.example');
+  const [history, setHistory] = useState<ConversionHistory[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleConvert = useCallback(async () => {
     if (!cobolSource.trim()) return;
@@ -108,10 +196,24 @@ function App() {
         packageName,
         javaVersion: 17,
         springBoot,
+        springBatch,
+        generateValidation,
       });
 
       setResult(conversionResult);
       setJavaOutput(conversionResult.java);
+
+      // Add to history
+      setHistory(prev => [
+        {
+          id: Date.now(),
+          timestamp: new Date(),
+          programName: conversionResult.className || 'Unknown',
+          linesConverted: conversionResult.metadata.linesConverted,
+          durationMs: conversionResult.metadata.durationMs,
+        },
+        ...prev.slice(0, 9), // Keep last 10
+      ]);
     } catch (error) {
       setResult({
         java: '',
@@ -129,11 +231,18 @@ function App() {
     } finally {
       setIsConverting(false);
     }
-  }, [cobolSource, springBoot, packageName]);
+  }, [cobolSource, springBoot, springBatch, generateValidation, packageName]);
 
   const handleSampleChange = (sampleName: string) => {
     setSelectedSample(sampleName);
     setCobolSource(SAMPLES[sampleName] || '');
+    setJavaOutput('');
+    setResult(null);
+  };
+
+  const handleFileUpload = (content: string) => {
+    setCobolSource(content);
+    setSelectedSample('');
     setJavaOutput('');
     setResult(null);
   };
@@ -169,15 +278,41 @@ function App() {
         onDownload={handleDownload}
         springBoot={springBoot}
         onSpringBootChange={setSpringBoot}
+        springBatch={springBatch}
+        onSpringBatchChange={setSpringBatch}
+        generateValidation={generateValidation}
+        onGenerateValidationChange={setGenerateValidation}
         packageName={packageName}
         onPackageNameChange={setPackageName}
+        onFileUpload={handleFileUpload}
       />
 
       <main className="main">
         <div className="panel">
           <div className="panel-header">
             <h2>COBOL Source</h2>
+            <button
+              className="btn btn-small"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              📜 History ({history.length})
+            </button>
           </div>
+          {showHistory && history.length > 0 && (
+            <div className="history-panel">
+              {history.map((item) => (
+                <div key={item.id} className="history-item">
+                  <span className="history-name">{item.programName}</span>
+                  <span className="history-meta">
+                    {item.linesConverted} lines • {item.durationMs}ms
+                  </span>
+                  <span className="history-time">
+                    {item.timestamp.toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="panel-content">
             <Editor
               value={cobolSource}
@@ -191,6 +326,12 @@ function App() {
         <div className="panel">
           <div className="panel-header">
             <h2>Java Output</h2>
+            {springBatch && result?.java && (
+              <span className="badge">Batch Tasklet</span>
+            )}
+            {generateValidation && result?.java && (
+              <span className="badge">+ Validator</span>
+            )}
           </div>
           <div className="panel-content">
             {isConverting ? (

@@ -10,3 +10,7 @@ export { JavaGenerator, type GeneratorOptions } from './generator.js';
 export { createLLMClient, type LLMClient, type LLMProvider } from './llm/index.js';
 export * from './errors.js';
 export * from './transform/index.js';
+export * from './dialect/index.js';
+export * from './batch/index.js';
+export * from './diff/index.js';
+export * from './javadoc/index.js';

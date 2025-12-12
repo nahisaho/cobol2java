@@ -1,0 +1,174 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "COBOL",
+  "scopeName": "source.cobol",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#divisions" },
+    { "include": "#sections" },
+    { "include": "#keywords" },
+    { "include": "#verbs" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#pic-clause" },
+    { "include": "#level-numbers" },
+    { "include": "#paragraph-names" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.cobol",
+          "match": "^.{6}\\*.*$"
+        },
+        {
+          "name": "comment.line.cobol",
+          "match": "^\\s*\\*>.*$"
+        },
+        {
+          "name": "comment.line.cobol",
+          "match": "^\\s*\\*.*$"
+        }
+      ]
+    },
+    "divisions": {
+      "patterns": [
+        {
+          "name": "keyword.control.division.cobol",
+          "match": "(?i)\\b(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\\s+DIVISION\\b"
+        }
+      ]
+    },
+    "sections": {
+      "patterns": [
+        {
+          "name": "keyword.control.section.cobol",
+          "match": "(?i)\\b(WORKING-STORAGE|LOCAL-STORAGE|LINKAGE|FILE|SCREEN|REPORT|COMMUNICATION)\\s+SECTION\\b"
+        },
+        {
+          "name": "keyword.control.section.cobol",
+          "match": "(?i)\\b(CONFIGURATION|INPUT-OUTPUT|FILE-CONTROL|I-O-CONTROL)\\s+SECTION\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.cobol",
+          "match": "(?i)\\b(PROGRAM-ID|AUTHOR|DATE-WRITTEN|DATE-COMPILED|INSTALLATION|SECURITY|SOURCE-COMPUTER|OBJECT-COMPUTER|SPECIAL-NAMES|REPOSITORY|CLASS-ID|METHOD-ID|FACTORY|OBJECT|FUNCTION-ID|INTERFACE-ID)\\b"
+        },
+        {
+          "name": "keyword.other.cobol",
+          "match": "(?i)\\b(COPY|REPLACE|EXEC|END-EXEC|EJECT|SKIP1|SKIP2|SKIP3|TITLE)\\b"
+        },
+        {
+          "name": "storage.type.cobol",
+          "match": "(?i)\\b(FD|SD|RD|CD|01|77|88|66)\\b"
+        },
+        {
+          "name": "keyword.control.conditional.cobol",
+          "match": "(?i)\\b(IF|THEN|ELSE|END-IF|EVALUATE|WHEN|END-EVALUATE|OTHER)\\b"
+        },
+        {
+          "name": "keyword.control.loop.cobol",
+          "match": "(?i)\\b(PERFORM|THRU|THROUGH|TIMES|UNTIL|VARYING|END-PERFORM|WITH\\s+TEST\\s+(BEFORE|AFTER))\\b"
+        }
+      ]
+    },
+    "verbs": {
+      "patterns": [
+        {
+          "name": "keyword.other.verb.cobol",
+          "match": "(?i)\\b(ACCEPT|ADD|ALTER|CALL|CANCEL|CLOSE|COMPUTE|CONTINUE|DELETE|DISPLAY|DIVIDE|ENTER|ENTRY|EVALUATE|EXAMINE|EXEC|EXIT|GO|GOBACK|IF|INITIALIZE|INSPECT|INVOKE|MERGE|MOVE|MULTIPLY|OPEN|PERFORM|READ|RELEASE|RETURN|REWRITE|SEARCH|SET|SORT|START|STOP|STRING|SUBTRACT|UNSTRING|WRITE)\\b"
+        },
+        {
+          "name": "keyword.control.flow.cobol",
+          "match": "(?i)\\b(STOP\\s+RUN|GO\\s+TO|EXIT\\s+PROGRAM|EXIT\\s+PERFORM|EXIT\\s+PARAGRAPH|EXIT\\s+SECTION)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.cobol",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.cobol",
+              "match": "\"\""
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.cobol",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.cobol",
+              "match": "''"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.cobol",
+          "match": "(?<![\\w-])[-+]?\\d+(\\.\\d+)?(?![\\w-])"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.cobol",
+          "match": "(?i)\\b(EQUAL|EQUALS|NOT\\s+EQUAL|GREATER|LESS|NOT\\s+GREATER|NOT\\s+LESS|>=|<=|>|<|=)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.cobol",
+          "match": "(?i)\\b(AND|OR|NOT)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.cobol",
+          "match": "(?i)\\b(GIVING|REMAINDER|ROUNDED|ON\\s+SIZE\\s+ERROR|NOT\\s+ON\\s+SIZE\\s+ERROR)\\b"
+        }
+      ]
+    },
+    "pic-clause": {
+      "patterns": [
+        {
+          "name": "storage.type.picture.cobol",
+          "match": "(?i)\\bPIC(TURE)?\\s+[SV9XAZ()+\\-.,B0/*$]+\\b"
+        },
+        {
+          "name": "storage.modifier.cobol",
+          "match": "(?i)\\b(COMP|COMP-1|COMP-2|COMP-3|COMP-4|COMP-5|BINARY|PACKED-DECIMAL|DISPLAY|INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)\\b"
+        },
+        {
+          "name": "keyword.other.clause.cobol",
+          "match": "(?i)\\b(VALUE|VALUES|REDEFINES|OCCURS|TIMES|INDEXED|BY|DEPENDING|ON|ASCENDING|DESCENDING|KEY|RENAMES|THROUGH|THRU|SIGN|LEADING|TRAILING|SEPARATE)\\b"
+        }
+      ]
+    },
+    "level-numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.level.cobol",
+          "match": "^\\s*(0[1-9]|[1-4][0-9]|77|88|66)\\b"
+        }
+      ]
+    },
+    "paragraph-names": {
+      "patterns": [
+        {
+          "name": "entity.name.function.paragraph.cobol",
+          "match": "^\\s{7,11}[A-Za-z][A-Za-z0-9-]*\\."
+        }
+      ]
+    }
+  }
+}

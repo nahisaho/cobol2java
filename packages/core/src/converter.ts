@@ -28,6 +28,8 @@ export interface ConversionOptions {
   springBoot?: boolean;
   /** Generate Spring Batch compatible code (tasklet/job) */
   springBatch?: boolean;
+  /** Generate data validation helpers */
+  generateValidation?: boolean;
   /** Generate unit tests */
   generateTests?: boolean;
   /** Target Java package name */
@@ -137,6 +139,7 @@ export async function convert(
     javaVersion: opts.javaVersion!,
     springBoot: opts.springBoot!,
     springBatch: opts.springBatch ?? false,
+    generateValidation: opts.generateValidation ?? false,
     llmClient,
   });
 

@@ -1,0 +1,25 @@
+{
+  "comments": {
+    "lineComment": "*"
+  },
+  "brackets": [
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    { "open": "(", "close": ")" },
+    { "open": "\"", "close": "\"" },
+    { "open": "'", "close": "'" }
+  ],
+  "surroundingPairs": [
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\\s+DIVISION",
+      "end": "^\\s*(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\\s+DIVISION|^\\s*END\\s+PROGRAM"
+    }
+  },
+  "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+)"
+}

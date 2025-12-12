@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # CLI service - for batch conversions
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/data
+    command: ["--help"]
+
+  # Webapp service - web interface
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.webapp
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # Development service
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  node_modules:

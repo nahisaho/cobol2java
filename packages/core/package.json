@@ -11,7 +11,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
@@ -19,12 +21,18 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {},
   "devDependencies": {
     "typescript": "^5.4.0"
   },
-  "peerDependencies": {},
-  "keywords": ["cobol", "java", "converter", "transpiler", "migration", "legacy", "mainframe"],
+  "keywords": [
+    "cobol",
+    "java",
+    "converter",
+    "transpiler",
+    "migration",
+    "legacy",
+    "mainframe"
+  ],
   "license": "MIT",
   "author": "nahisaho",
   "repository": {
@@ -41,5 +49,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "glob": "^13.0.0"
   }
 }

@@ -1,0 +1,158 @@
+{
+  "name": "cobol2java-vscode",
+  "displayName": "COBOL2Java",
+  "description": "COBOL to Java converter with syntax highlighting and conversion commands",
+  "version": "0.1.0",
+  "publisher": "cobol2java",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Other"
+  ],
+  "keywords": [
+    "cobol",
+    "java",
+    "converter",
+    "mainframe",
+    "modernization"
+  ],
+  "activationEvents": [
+    "onLanguage:cobol",
+    "onCommand:cobol2java.convert",
+    "onCommand:cobol2java.convertToClipboard"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "cobol",
+        "aliases": [
+          "COBOL",
+          "cobol"
+        ],
+        "extensions": [
+          ".cob",
+          ".cbl",
+          ".cobol",
+          ".cpy"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cobol",
+        "scopeName": "source.cobol",
+        "path": "./syntaxes/cobol.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "cobol2java.convert",
+        "title": "Convert COBOL to Java",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.convertToClipboard",
+        "title": "Convert COBOL to Java (Copy to Clipboard)",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.detectDialect",
+        "title": "Detect COBOL Dialect",
+        "category": "COBOL2Java"
+      },
+      {
+        "command": "cobol2java.showPreview",
+        "title": "Preview Java Conversion",
+        "category": "COBOL2Java"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "cobol2java.convert",
+          "when": "editorLangId == cobol",
+          "group": "cobol2java"
+        },
+        {
+          "command": "cobol2java.showPreview",
+          "when": "editorLangId == cobol",
+          "group": "cobol2java"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "cobol2java.convert",
+          "when": "editorLangId == cobol",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "COBOL2Java",
+      "properties": {
+        "cobol2java.packageName": {
+          "type": "string",
+          "default": "com.example.converted",
+          "description": "Default Java package name for converted files"
+        },
+        "cobol2java.javaVersion": {
+          "type": "number",
+          "default": 17,
+          "enum": [8, 11, 17, 21],
+          "description": "Target Java version"
+        },
+        "cobol2java.springBoot": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate Spring Boot annotations"
+        },
+        "cobol2java.springBatch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate Spring Batch Tasklet for batch programs"
+        },
+        "cobol2java.outputDirectory": {
+          "type": "string",
+          "default": "./java-output",
+          "description": "Output directory for converted Java files"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "cobol2java.convert",
+        "key": "ctrl+shift+j",
+        "mac": "cmd+shift+j",
+        "when": "editorLangId == cobol"
+      },
+      {
+        "command": "cobol2java.showPreview",
+        "key": "ctrl+shift+p",
+        "mac": "cmd+shift+p",
+        "when": "editorLangId == cobol"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build",
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "pnpm run build --watch",
+    "lint": "eslint src --ext ts",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@cobol2java/core": "workspace:*"
+  }
+}
