@@ -1859,6 +1859,76 @@ private void debug${toClassName(match[1]!)}() {
     },
     description: 'Rewrite record from variable',
   },
+  // REWRITE without FROM
+  {
+    pattern: /REWRITE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const record = toJavaName(match[1]!);
+      return `// REWRITE: Update record in place\n${record}Stream.seek(currentPosition); ${record}Stream.writeBytes(${record});`;
+    },
+    description: 'Rewrite record in place',
+  },
+  // DELETE statement (indexed/relative files)
+  {
+    pattern: /DELETE\s+(\w[\w-]*)\s+RECORD/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Data.remove(currentKey); // DELETE record`;
+    },
+    description: 'Delete record from indexed file',
+  },
+  {
+    pattern: /DELETE\s+(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      return `${file}Data.remove(currentKey); // DELETE record`;
+    },
+    description: 'Delete record from file',
+  },
+  // START statement (indexed file positioning) - GREATER patterns first
+  {
+    pattern: /START\s+(\w[\w-]*)\s+KEY\s+(?:IS\s+)?GREATER\s+(?:THAN\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      return `// START: Position after key\n${file}Iterator = ${file}Data.tailMap(${key}, false).keySet().iterator();`;
+    },
+    description: 'Start file at key (greater than)',
+  },
+  {
+    pattern: /START\s+(\w[\w-]*)\s+KEY\s+(?:IS\s+)?(?:NOT\s+)?LESS\s+(?:THAN\s+)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      return `// START: Position at or after key\n${file}Iterator = ${file}Data.tailMap(${key}).keySet().iterator();`;
+    },
+    description: 'Start file at key (not less)',
+  },
+  // EQUAL pattern last (most general)
+  {
+    pattern: /START\s+(\w[\w-]*)\s+KEY\s+(?:IS\s+)?(?:EQUAL\s+(?:TO\s+)?|=\s*)?(\w[\w-]*)/gi,
+    transform: (match) => {
+      const file = toJavaName(match[1]!);
+      const key = toJavaName(match[2]!);
+      return `// START: Position to key\n${file}Iterator = ${file}Data.tailMap(${key}).keySet().iterator();`;
+    },
+    description: 'Start file at key (equal)',
+  },
+  // INVALID KEY clause
+  {
+    pattern: /INVALID\s+KEY\s+(.+)/gi,
+    transform: (match) => {
+      const statement = transformStatement(match[1]!) || match[1];
+      return `// INVALID KEY\nif (fileStatus.startsWith("2")) { ${statement} }`;
+    },
+    description: 'Invalid key handler',
+  },
+  // NOT INVALID KEY clause
+  {
+    pattern: /NOT\s+INVALID\s+KEY/gi,
+    transform: () => '// NOT INVALID KEY: Key operation succeeded',
+    description: 'Not invalid key (success)',
+  },
   // AT END clause for READ
   {
     pattern: /AT\s+END\s+(.+)/gi,

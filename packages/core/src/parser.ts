@@ -33,11 +33,23 @@ export interface DataItem {
   value?: string;
   values?: string[]; // For 88-level conditions with THRU/THROUGH
   occurs?: number;
-  usage?: string;
+  occursMin?: number;            // OCCURS DEPENDING ON min
+  occursMax?: number;            // OCCURS DEPENDING ON max
+  dependingOn?: string;          // OCCURS DEPENDING ON variable
+  usage?: 'DISPLAY' | 'BINARY' | 'COMP' | 'COMP-1' | 'COMP-2' | 'COMP-3' | 'COMP-4' | 'COMP-5' | 'PACKED-DECIMAL' | 'POINTER' | 'INDEX';
   redefines?: string;
+  renames?: { from: string; thru?: string };  // 66-level RENAMES
   indexed?: string[];
   key?: string;
   parentName?: string; // For 88-level conditions
+  synchronized?: 'LEFT' | 'RIGHT';  // SYNCHRONIZED/SYNC
+  justified?: 'RIGHT';              // JUSTIFIED RIGHT
+  blankWhenZero?: boolean;          // BLANK WHEN ZERO
+  signLeading?: boolean;            // SIGN IS LEADING
+  signTrailing?: boolean;           // SIGN IS TRAILING
+  signSeparate?: boolean;           // SIGN ... SEPARATE CHARACTER
+  external?: boolean;               // EXTERNAL
+  global?: boolean;                 // GLOBAL
 }
 
 /**
@@ -690,6 +702,9 @@ export class CobolParser {
         dataItem.redefines = redefinesMatch[1];
       }
       
+      // Extract additional clauses
+      this.extractDataItemClauses(dataItem, line);
+      
       return dataItem;
     }
     
@@ -707,6 +722,8 @@ export class CobolParser {
       if (redefinesMatch[4]) {
         dataItem.pic = redefinesMatch[4];
       }
+      // Extract additional clauses
+      this.extractDataItemClauses(dataItem, line);
       return dataItem;
     }
     
@@ -730,6 +747,8 @@ export class CobolParser {
       if (occursIndexedMatch[6]) {
         dataItem.key = occursIndexedMatch[6];
       }
+      // Extract additional clauses
+      this.extractDataItemClauses(dataItem, line);
       return dataItem;
     }
     
@@ -739,23 +758,160 @@ export class CobolParser {
     );
     
     if (picOnlyMatch) {
-      return {
+      const dataItem: DataItem = {
         level: parseInt(picOnlyMatch[1]!, 10),
         name: picOnlyMatch[2]!,
         pic: picOnlyMatch[3]!,
       };
+      // Extract additional clauses
+      this.extractDataItemClauses(dataItem, line);
+      return dataItem;
     }
     
     // Try simpler pattern: 01 FILLER or 01 WS-GROUP
     const simpleMatch = upperLine.match(/^(\d{1,2})\s+(\w[\w-]*)\s*\.?$/);
     if (simpleMatch) {
-      return {
+      const dataItem: DataItem = {
         level: parseInt(simpleMatch[1]!, 10),
         name: simpleMatch[2]!,
       };
+      // Extract additional clauses
+      this.extractDataItemClauses(dataItem, line);
+      return dataItem;
+    }
+    
+    // Try 66-level RENAMES
+    const renamesMatch = upperLine.match(
+      /^66\s+(\w[\w-]*)\s+RENAMES\s+(\w[\w-]*)(?:\s+(?:THRU|THROUGH)\s+(\w[\w-]*))?\.?\s*$/i
+    );
+    if (renamesMatch) {
+      return {
+        level: 66,
+        name: renamesMatch[1]!,
+        renames: {
+          from: renamesMatch[2]!,
+          thru: renamesMatch[3],
+        },
+      };
+    }
+    
+    // Flexible pattern: level + name + optional clauses
+    // This catches data items with USAGE, COMP, etc. without strict ordering
+    const flexibleMatch = upperLine.match(/^(\d{1,2})\s+(\w[\w-]*)\s+(.+?)\.?\s*$/);
+    if (flexibleMatch) {
+      const dataItem: DataItem = {
+        level: parseInt(flexibleMatch[1]!, 10),
+        name: flexibleMatch[2]!,
+      };
+      
+      const rest = flexibleMatch[3]!;
+      
+      // Extract PIC from the rest
+      const picMatch = rest.match(/PIC(?:TURE)?\s+(\S+)/i);
+      if (picMatch) {
+        dataItem.pic = picMatch[1]!;
+      }
+      
+      // Extract VALUE from the rest
+      const valueMatch = rest.match(/VALUE\s+(?:IS\s+)?["']?([^"'.]+)["']?/i);
+      if (valueMatch) {
+        dataItem.value = valueMatch[1]!.trim();
+      }
+      
+      // Extract OCCURS from the rest
+      const occursMatch = rest.match(/OCCURS\s+(\d+)/i);
+      if (occursMatch) {
+        dataItem.occurs = parseInt(occursMatch[1]!, 10);
+      }
+      
+      // Extract REDEFINES from the rest
+      const redefMatch = rest.match(/REDEFINES\s+(\w[\w-]*)/i);
+      if (redefMatch) {
+        dataItem.redefines = redefMatch[1];
+      }
+      
+      // Extract all additional clauses
+      this.extractDataItemClauses(dataItem, line);
+      
+      return dataItem;
     }
     
     return null;
+  }
+
+  /**
+   * Extract additional clauses from a data item line
+   */
+  private extractDataItemClauses(dataItem: DataItem, line: string): void {
+    const upperLine = line.toUpperCase();
+    
+    // USAGE clause
+    const usageMatch = upperLine.match(
+      /USAGE\s+(?:IS\s+)?(DISPLAY|BINARY|COMP(?:-[1-5])?|PACKED-DECIMAL|POINTER|INDEX)/i
+    );
+    if (usageMatch) {
+      dataItem.usage = usageMatch[1] as DataItem['usage'];
+    }
+    
+    // Shorthand COMP without USAGE keyword
+    const compMatch = upperLine.match(
+      /\s(COMP(?:-[1-5])?|BINARY|PACKED-DECIMAL)(?:\s|\.)/i
+    );
+    if (compMatch && !usageMatch) {
+      dataItem.usage = compMatch[1] as DataItem['usage'];
+    }
+    
+    // SYNCHRONIZED/SYNC - match keyword preceded by space or start of line
+    const syncMatch = upperLine.match(/(?:^|\s)SYNC(?:HRONIZED)?(?:\s+(LEFT|RIGHT))?(?:\s|\.|$)/i);
+    if (syncMatch) {
+      const syncDir = syncMatch[1]?.toUpperCase();
+      dataItem.synchronized = (syncDir === 'LEFT' ? 'LEFT' : 'RIGHT');
+    }
+    
+    // JUSTIFIED/JUST RIGHT
+    if (/JUST(?:IFIED)?(?:\s+RIGHT)?/i.test(upperLine)) {
+      dataItem.justified = 'RIGHT';
+    }
+    
+    // BLANK WHEN ZERO
+    if (/BLANK\s+(?:WHEN\s+)?ZERO/i.test(upperLine)) {
+      dataItem.blankWhenZero = true;
+    }
+    
+    // SIGN clause
+    const signMatch = upperLine.match(
+      /SIGN\s+(?:IS\s+)?(LEADING|TRAILING)(?:\s+SEPARATE(?:\s+CHARACTER)?)?/i
+    );
+    if (signMatch) {
+      if (signMatch[1]?.toUpperCase() === 'LEADING') {
+        dataItem.signLeading = true;
+      } else {
+        dataItem.signTrailing = true;
+      }
+      if (/SEPARATE/i.test(upperLine)) {
+        dataItem.signSeparate = true;
+      }
+    }
+    
+    // EXTERNAL
+    if (/\bEXTERNAL\b/i.test(upperLine)) {
+      dataItem.external = true;
+    }
+    
+    // GLOBAL
+    if (/\bGLOBAL\b/i.test(upperLine)) {
+      dataItem.global = true;
+    }
+    
+    // OCCURS DEPENDING ON
+    const dependingMatch = upperLine.match(
+      /OCCURS\s+(\d+)\s+TO\s+(\d+)\s+(?:TIMES\s+)?DEPENDING\s+(?:ON\s+)?(\w[\w-]*)/i
+    );
+    if (dependingMatch) {
+      dataItem.occursMin = parseInt(dependingMatch[1]!, 10);
+      dataItem.occursMax = parseInt(dependingMatch[2]!, 10);
+      dataItem.dependingOn = dependingMatch[3];
+    }
   }
 
   /**

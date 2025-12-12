@@ -349,4 +349,174 @@ describe('CobolParser', () => {
       expect(copyStmt?.replacing?.[0]?.to).toBe('WS-');
     });
   });
+
+  describe('DATA DIVISION enhancements', () => {
+    it('should parse USAGE clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. USAGE-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-BINARY-NUM PIC 9(9) USAGE BINARY.
+        01 WS-COMP-NUM PIC 9(5) COMP.
+        01 WS-PACKED PIC S9(7)V99 COMP-3.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const binaryItem = ast.dataItems.find(d => d.name === 'WS-BINARY-NUM');
+      expect(binaryItem?.usage).toBe('BINARY');
+
+      const compItem = ast.dataItems.find(d => d.name === 'WS-COMP-NUM');
+      expect(compItem?.usage).toBe('COMP');
+
+      const packedItem = ast.dataItems.find(d => d.name === 'WS-PACKED');
+      expect(packedItem?.usage).toBe('COMP-3');
+    });
+
+    it('should parse SYNCHRONIZED clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SYNC-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-SYNC-DATA PIC 9(9) SYNC.
+        01 WS-SYNC-LEFT PIC X(10) SYNCHRONIZED LEFT.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const syncItem = ast.dataItems.find(d => d.name === 'WS-SYNC-DATA');
+      expect(syncItem?.synchronized).toBe('RIGHT');
+
+      const syncLeftItem = ast.dataItems.find(d => d.name === 'WS-SYNC-LEFT');
+      expect(syncLeftItem?.synchronized).toBe('LEFT');
+    });
+
+    it('should parse JUSTIFIED clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. JUST-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-JUST-DATA PIC X(20) JUST RIGHT.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const justItem = ast.dataItems.find(d => d.name === 'WS-JUST-DATA');
+      expect(justItem?.justified).toBe('RIGHT');
+    });
+
+    it('should parse BLANK WHEN ZERO clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. BLANK-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-AMOUNT PIC ZZZ9.99 BLANK WHEN ZERO.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const blankItem = ast.dataItems.find(d => d.name === 'WS-AMOUNT');
+      expect(blankItem?.blankWhenZero).toBe(true);
+    });
+
+    it('should parse SIGN clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. SIGN-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-SIGNED PIC S9(5) SIGN LEADING SEPARATE.
+        01 WS-TRAIL PIC S9(5) SIGN TRAILING.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const leadingItem = ast.dataItems.find(d => d.name === 'WS-SIGNED');
+      expect(leadingItem?.signLeading).toBe(true);
+      expect(leadingItem?.signSeparate).toBe(true);
+
+      const trailItem = ast.dataItems.find(d => d.name === 'WS-TRAIL');
+      expect(trailItem?.signTrailing).toBe(true);
+    });
+
+    it('should parse 66 RENAMES clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. RENAMES-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-RECORD.
+           05 WS-FIELD-A PIC X(10).
+           05 WS-FIELD-B PIC X(20).
+           05 WS-FIELD-C PIC X(30).
+        66 WS-ALL-FIELDS RENAMES WS-FIELD-A THRU WS-FIELD-C.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const renamesItem = ast.dataItems.find(d => d.level === 66);
+      expect(renamesItem?.name).toBe('WS-ALL-FIELDS');
+      expect(renamesItem?.renames?.from).toBe('WS-FIELD-A');
+      expect(renamesItem?.renames?.thru).toBe('WS-FIELD-C');
+    });
+
+    it('should parse OCCURS DEPENDING ON clause', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. DEPENDING-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-COUNT PIC 9(3).
+        01 WS-TABLE.
+           05 WS-ITEMS OCCURS 1 TO 100 DEPENDING ON WS-COUNT.
+              10 WS-ITEM-NAME PIC X(20).
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const dependingItem = ast.dataItems.find(d => d.name === 'WS-ITEMS');
+      expect(dependingItem?.occursMin).toBe(1);
+      expect(dependingItem?.occursMax).toBe(100);
+      expect(dependingItem?.dependingOn).toBe('WS-COUNT');
+    });
+
+    it('should parse EXTERNAL and GLOBAL clauses', () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. EXTERNAL-TEST.
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 WS-EXT-DATA PIC X(50) EXTERNAL.
+        01 WS-GLOBAL-DATA PIC 9(10) GLOBAL.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+
+      const extItem = ast.dataItems.find(d => d.name === 'WS-EXT-DATA');
+      expect(extItem?.external).toBe(true);
+
+      const globalItem = ast.dataItems.find(d => d.name === 'WS-GLOBAL-DATA');
+      expect(globalItem?.global).toBe(true);
+    });
+  });
 });

@@ -306,6 +306,48 @@ describe('File I/O statements', () => {
   it('transforms CLOSE', () => {
     expect(transformStatement('CLOSE CUSTOMER-FILE')).toContain('close()');
   });
+
+  it('transforms DELETE RECORD', () => {
+    const result = transformStatement('DELETE CUSTOMER-FILE RECORD');
+    expect(result).toContain('remove');
+    expect(result).toContain('DELETE');
+  });
+
+  it('transforms DELETE without RECORD keyword', () => {
+    const result = transformStatement('DELETE INDEXED-FILE');
+    expect(result).toContain('remove');
+  });
+
+  it('transforms START KEY EQUAL', () => {
+    const result = transformStatement('START CUSTOMER-FILE KEY = WS-KEY');
+    expect(result).toContain('tailMap');
+    expect(result).toContain('START');
+  });
+
+  it('transforms START KEY GREATER THAN', () => {
+    const result = transformStatement('START CUSTOMER-FILE KEY GREATER THAN WS-KEY');
+    expect(result).toContain('tailMap');
+    // With GREATER THAN, the key should be excluded
+    expect(result).toContain('false');
+  });
+
+  it('transforms REWRITE without FROM', () => {
+    const result = transformStatement('REWRITE CUSTOMER-REC');
+    // Either REWRITE comment or Writer.write output is acceptable
+    expect(result).toMatch(/REWRITE|write/i);
+  });
+
+  it('transforms INVALID KEY', () => {
+    const result = transformStatement('INVALID KEY DISPLAY "ERROR"');
+    expect(result).toContain('INVALID KEY');
+    // Check for either fileStatus check or exception handling
+    expect(result).toMatch(/fileStatus|KeyNotFoundException|catch/i);
+  });
+
+  it('transforms NOT INVALID KEY', () => {
+    const result = transformStatement('NOT INVALID KEY');
+    expect(result).toContain('NOT INVALID KEY');
+  });
 });
 
 describe('SEARCH statement', () => {
