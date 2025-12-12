@@ -487,7 +487,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
   {
     pattern: /SEND\s+(\w[\w-]*)\s+FROM\s+(\w[\w-]*)/gi,
     transform: (match) => {
-      const queue = toJavaName(match[1]!);
+      const _queue = toJavaName(match[1]!);
       const data = toJavaName(match[2]!);
       return `messageQueue.send("${match[1]}", ${data}); // SEND message`;
     },
@@ -497,7 +497,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
   {
     pattern: /RECEIVE\s+(\w[\w-]*)\s+INTO\s+(\w[\w-]*)/gi,
     transform: (match) => {
-      const queue = toJavaName(match[1]!);
+      const _queue = toJavaName(match[1]!);
       const data = toJavaName(match[2]!);
       return `${data} = messageQueue.receive("${match[1]}"); // RECEIVE message`;
     },
@@ -516,7 +516,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
   {
     pattern: /PURGE\s+(\w[\w-]*)/gi,
     transform: (match) => {
-      const queue = toJavaName(match[1]!);
+      const _queue = toJavaName(match[1]!);
       return `messageQueue.purge("${match[1]}"); // PURGE queue`;
     },
     description: 'Purge message queue',
@@ -526,7 +526,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
     pattern: /ENABLE\s+(INPUT|OUTPUT)\s+(\w[\w-]*)/gi,
     transform: (match) => {
       const mode = match[1]!.toLowerCase();
-      const queue = toJavaName(match[2]!);
+      const _queue = toJavaName(match[2]!);
       return `messageQueue.enable${match[1]!.charAt(0) + match[1]!.slice(1).toLowerCase()}("${match[2]}"); // ENABLE ${mode}`;
     },
     description: 'Enable queue input/output',
@@ -536,7 +536,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
     pattern: /DISABLE\s+(INPUT|OUTPUT)\s+(\w[\w-]*)/gi,
     transform: (match) => {
       const mode = match[1]!.toLowerCase();
-      const queue = toJavaName(match[2]!);
+      const _queue = toJavaName(match[2]!);
       return `messageQueue.disable${match[1]!.charAt(0) + match[1]!.slice(1).toLowerCase()}("${match[2]}"); // DISABLE ${mode}`;
     },
     description: 'Disable queue input/output',
@@ -582,7 +582,7 @@ cicsTransaction.transfer("${program}", ${commarea});`;
   {
     pattern: /USE\s+(?:FOR\s+)?DEBUGGING\s+(?:ON\s+)?(\w[\w-]*)/gi,
     transform: (match) => {
-      const target = toJavaName(match[1]!);
+      const _target = toJavaName(match[1]!);
       return `// USE FOR DEBUGGING ON ${match[1]}
 private void debug${toClassName(match[1]!)}() {
     // Debug declarative - called when ${match[1]} is referenced`;
@@ -992,8 +992,7 @@ private void debug${toClassName(match[1]!)}() {
   // PERFORM WITH TEST AFTER (do-while)
   {
     pattern: /PERFORM\s+WITH\s+TEST\s+AFTER\s+UNTIL\s+(.+)/gi,
-    transform: (match) => {
-      const condition = transformCondition(match[1]!);
+    transform: (_match) => {
       return `do {`;
     },
     description: 'Perform with test after (do-while)',

@@ -185,7 +185,7 @@ export class CobolParser {
     let currentSection: 'identification' | 'environment' | 'data' | 'procedure' | null = null;
     let currentSubSection: 'file-control' | 'working-storage' | 'file' | 'special-names' | null = null;
     let currentParagraph: Paragraph | null = null;
-    let currentFileDefinition: Partial<FileDefinition> | null = null;
+    let _currentFileDefinition: Partial<FileDefinition> | null = null;
     let selectBuffer = '';  // Buffer for multi-line SELECT statements
     let copyBuffer = '';    // Buffer for multi-line COPY statements
 
@@ -249,32 +249,32 @@ export class CobolParser {
         
         // Parse IDENTIFICATION DIVISION paragraphs
         const authorMatch = line.match(/AUTHOR\.\s*(.+?)\.?\s*$/i);
-        if (authorMatch) {
+        if (authorMatch?.[1]) {
           identificationInfo.author = authorMatch[1].trim();
         }
         
         const installMatch = line.match(/INSTALLATION\.\s*(.+?)\.?\s*$/i);
-        if (installMatch) {
+        if (installMatch?.[1]) {
           identificationInfo.installation = installMatch[1].trim();
         }
         
         const dateWrittenMatch = line.match(/DATE-WRITTEN\.\s*(.+?)\.?\s*$/i);
-        if (dateWrittenMatch) {
+        if (dateWrittenMatch?.[1]) {
           identificationInfo.dateWritten = dateWrittenMatch[1].trim();
         }
         
         const dateCompiledMatch = line.match(/DATE-COMPILED\.\s*(.+?)\.?\s*$/i);
-        if (dateCompiledMatch) {
+        if (dateCompiledMatch?.[1]) {
           identificationInfo.dateCompiled = dateCompiledMatch[1].trim();
         }
         
         const securityMatch = line.match(/SECURITY\.\s*(.+?)\.?\s*$/i);
-        if (securityMatch) {
+        if (securityMatch?.[1]) {
           identificationInfo.security = securityMatch[1].trim();
         }
         
         const remarksMatch = line.match(/REMARKS\.\s*(.+?)\.?\s*$/i);
-        if (remarksMatch) {
+        if (remarksMatch?.[1]) {
           identificationInfo.remarks = remarksMatch[1].trim();
         }
       }
