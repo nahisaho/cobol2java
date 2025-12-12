@@ -105,6 +105,71 @@ export class ClaudeClient implements LLMClient {
     throw lastError || new Error('Claude request failed after retries');
   }
 
+  /**
+   * Stream completion (for streaming UI support)
+   */
+  async *streamComplete(
+    prompt: string,
+    options?: CompletionOptions
+  ): AsyncGenerator<string, void, unknown> {
+    if (!this.config.apiKey) {
+      throw new Error('Claude API key is required');
+    }
+
+    const systemPrompt = options?.systemPrompt || COBOL2JAVA_SYSTEM_PROMPT;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: this.config.model || this.defaultModel,
+        max_tokens: options?.maxTokens ?? 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }],
+        stop_sequences: options?.stopSequences,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value);
+      const lines = text.split('\n').filter(line => line.trim());
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') return;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta') {
+              const content = parsed.delta?.text;
+              if (content) yield content;
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+  }
+
   async isAvailable(): Promise<boolean> {
     return !!this.config.apiKey;
   }
