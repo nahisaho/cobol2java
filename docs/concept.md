@@ -1,6 +1,6 @@
 # COBOL2Java コンセプト
 
-**Version**: 1.3.0  
+**Version**: 1.0.0  
 **Last Updated**: 2025-12-13
 
 ---
@@ -30,7 +30,7 @@ COBOL2Javaは、ルールベースの確実な変換とLLM（大規模言語モ�
 │                  COBOL2Javaの解決策                          │
 ├─────────────────────────────────────────────────────────────┤
 │  🤖 LLM + 構文解析のハイブリッド変換                         │
-│  📐 200+ の変換ルールによる確実な構文変換                    │
+│  📐 240+ の変換ルールによる確実な構文変換                    │
 │  ✅ COBOLEval 146問による定量的品質保証                      │
 │  🔧 CI/CDパイプライン統合対応                                │
 │  🆓 オープンソースで導入障壁を低減                           │
@@ -68,7 +68,7 @@ COBOL2Javaは「ルールベース変換」と「LLM補助変換」を組み合�
 │  │   Rule-Based Transform   │  │    LLM-Assisted         │   │
 │  │   (確実な構文変換)       │  │    (複雑ロジック理解)   │   │
 │  │                          │  │                          │   │
-│  │  • 200+ Statement Rules  │  │  • OpenAI GPT-4o        │   │
+│  │  • 240+ Statement Rules  │  │  • OpenAI GPT-4o        │   │
 │  │  • 80+ Intrinsic Funcs   │  │  • Claude 3.5 Sonnet    │   │
 │  │  • 15+ Data Types        │  │  • Ollama (ローカル)    │   │
 │  │  • 20+ Error Handlers    │  │  • GitHub Copilot       │   │
@@ -109,8 +109,8 @@ COBOL2Javaは「ルールベース変換」と「LLM補助変換」を組み合�
 ├─────────────────────────────────────────┤
 │  ✅ COBOL-85 (ANSI標準)                 │
 │  ✅ Enterprise COBOL (IBM)              │
-│  ⏳ GnuCOBOL                            │
-│  ⏳ Micro Focus COBOL                   │
+│  ✅ GnuCOBOL                            │
+│  ✅ Micro Focus COBOL                   │
 └─────────────────────────────────────────┘
 ```
 
@@ -118,7 +118,7 @@ COBOL2Javaは「ルールベース変換」と「LLM補助変換」を組み合�
 
 ## 3. 主要機能
 
-### 3.1 構文変換（200+ ルール）
+### 3.1 構文変換（240+ ルール）
 
 #### 基本ステートメント
 

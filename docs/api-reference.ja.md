@@ -624,3 +624,143 @@ const { code, optimizedCode } = await pipeline.convertAndOptimize(cobolSource);
 | `optimization` | 最適化Javaコード |
 | `test-generation` | JUnitテスト |
 | `validation` | 検証結果 |
+
+---
+
+## Enterprise モジュール (v1.0.0)
+
+### JCL Parser
+
+JCL（Job Control Language）を解析してSpring Batch設定を生成。
+
+```typescript
+import { JclParser } from '@cobol2java/core';
+
+const parser = new JclParser();
+const job = parser.parse(jclSource);
+
+console.log(`ジョブ名: ${job.jobName}`);
+console.log(`ステップ数: ${job.steps.length}`);
+
+// Spring Batch設定生成
+const springConfig = parser.generateSpringBatchConfig(job);
+```
+
+#### 対応ステートメント
+
+| ステートメント | 説明 |
+|---------------|------|
+| `JOB` | ジョブ定義 |
+| `EXEC` | プログラム実行 |
+| `DD` | データ定義（DISP, DSN, DCB） |
+
+---
+
+### DB2 Support
+
+埋め込みSQLの解析とSpring Data JPA変換。
+
+```typescript
+import { DB2Parser } from '@cobol2java/core';
+
+const parser = new DB2Parser();
+const sqlStatements = parser.extractSql(cobolSource);
+
+for (const stmt of sqlStatements) {
+  console.log(`SQL: ${stmt.sql}`);
+  console.log(`ホスト変数: ${stmt.hostVariables.join(', ')}`);
+}
+
+// JPA Entity生成
+const entity = parser.generateJpaEntity(tableDef);
+```
+
+---
+
+### IMS Support
+
+IMS DL/I呼び出しの解析。
+
+```typescript
+import { IMSParser } from '@cobol2java/core';
+
+const parser = new IMSParser();
+const calls = parser.parseCalls(cobolSource);
+
+for (const call of calls) {
+  console.log(`関数: ${call.functionCode}`);  // GU, GN, ISRT, etc.
+  console.log(`PCB: ${call.pcbName}`);
+  console.log(`セグメント: ${call.segmentName}`);
+}
+```
+
+---
+
+## Performance モジュール (v1.0.0)
+
+### Worker Pool
+
+並列タスク処理。
+
+```typescript
+import { WorkerPool, ParallelConverter } from '@cobol2java/core';
+
+// カスタムワーカープール
+const pool = new WorkerPool<string, string>(
+  async (source) => convert(source),
+  { maxWorkers: 4, taskTimeout: 30000 }
+);
+
+const result = await pool.submit({
+  id: '1',
+  type: 'conversion',
+  data: cobolSource,
+  priority: 10,
+});
+
+// 並列変換
+const converter = new ParallelConverter();
+const results = await converter.convert([source1, source2, source3]);
+```
+
+---
+
+### Incremental Parser
+
+大規模ファイル向けの増分パース。
+
+```typescript
+import { IncrementalParser } from '@cobol2java/core';
+
+const parser = new IncrementalParser(initialSource);
+
+// 部分更新
+parser.update(modifiedSource);
+
+// キャッシュされたASTを取得
+const ast = await parser.getAst();
+console.log(`バージョン: ${parser.getVersion()}`);
+```
+
+---
+
+### Object Pool
+
+オブジェクト再利用によるメモリ効率化。
+
+```typescript
+import { PoolManager, withPooledStringBuilder } from '@cobol2java/core';
+
+// プール統計
+const stats = PoolManager.getStats();
+console.log(`作成数: ${stats.totalCreated}`);
+console.log(`借用中: ${stats.borrowed}`);
+
+// プール付きStringBuilder
+const result = withPooledStringBuilder((sb) => {
+  sb.append('public class ');
+  sb.appendLine('Example {');
+  sb.appendLine('}');
+  return sb.toString();
+});
+```
