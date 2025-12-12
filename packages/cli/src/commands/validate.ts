@@ -6,7 +6,7 @@
 
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
-import { CobolParser, formatError } from '@cobol2java/core';
+import { CobolParser, formatError, type ErrorInfo } from '@cobol2java/core';
 
 export const validateCommand = new Command('validate')
   .description('Validate COBOL source file syntax')
@@ -29,17 +29,17 @@ export const validateCommand = new Command('validate')
         process.exit(0);
       }
 
-      const errors = ast.errors.filter(e => e.severity === 'fatal' || e.severity === 'error');
-      const warnings = ast.errors.filter(e => e.severity === 'warning');
+      const errors = ast.errors.filter((e: ErrorInfo) => e.severity === 'fatal' || e.severity === 'error');
+      const warnings = ast.errors.filter((e: ErrorInfo) => e.severity === 'warning');
 
       if (errors.length > 0) {
         console.log('\nErrors:');
-        errors.forEach(err => console.log(`  ${formatError(err)}`));
+        errors.forEach((err: ErrorInfo) => console.log(`  ${formatError(err)}`));
       }
 
       if (warnings.length > 0) {
         console.log('\nWarnings:');
-        warnings.forEach(warn => console.log(`  ${formatError(warn)}`));
+        warnings.forEach((warn: ErrorInfo) => console.log(`  ${formatError(warn)}`));
       }
 
       // Exit code

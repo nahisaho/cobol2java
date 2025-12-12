@@ -89,7 +89,7 @@ async function runExamplesBenchmark(options: {
       const conversionResult = await convert(cobolSource, conversionOptions);
 
       if (conversionResult.errors.length > 0) {
-        result.errors.push(...conversionResult.errors.map(e => `Convert: ${e.message}`));
+        result.errors.push(...conversionResult.errors.map((e: { message: string }) => `Convert: ${e.message}`));
       } else {
         result.converted = true;
 

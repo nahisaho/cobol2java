@@ -7,7 +7,7 @@
 import { Command } from 'commander';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { convert, type ConversionOptions, formatError } from '@cobol2java/core';
+import { convert, type ConversionOptions, formatError, type ErrorInfo } from '@cobol2java/core';
 
 export const convertCommand = new Command('convert')
   .description('Convert COBOL source file to Java')
@@ -77,12 +77,12 @@ export const convertCommand = new Command('convert')
         // Report errors/warnings
         if (result.errors.length > 0) {
           console.log('\nErrors:');
-          result.errors.forEach(err => console.log(`  ${formatError(err)}`));
+          result.errors.forEach((err: ErrorInfo) => console.log(`  ${formatError(err)}`));
         }
 
         if (result.warnings.length > 0) {
           console.log('\nWarnings:');
-          result.warnings.forEach(warn => console.log(`  ${formatError(warn)}`));
+          result.warnings.forEach((warn: ErrorInfo) => console.log(`  ${formatError(warn)}`));
         }
 
         // Report metadata
