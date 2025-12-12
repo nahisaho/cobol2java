@@ -92,6 +92,8 @@ function App() {
   const [isConverting, setIsConverting] = useState(false);
   const [result, setResult] = useState<ConversionResult | null>(null);
   const [selectedSample, setSelectedSample] = useState('Hello World');
+  const [springBoot, setSpringBoot] = useState(false);
+  const [packageName, setPackageName] = useState('com.example');
 
   const handleConvert = useCallback(async () => {
     if (!cobolSource.trim()) return;
@@ -103,8 +105,9 @@ function App() {
     try {
       const conversionResult = await convert(cobolSource, {
         llmProvider: 'none',
-        packageName: 'com.example',
+        packageName,
         javaVersion: 17,
+        springBoot,
       });
 
       setResult(conversionResult);
@@ -126,7 +129,7 @@ function App() {
     } finally {
       setIsConverting(false);
     }
-  }, [cobolSource]);
+  }, [cobolSource, springBoot, packageName]);
 
   const handleSampleChange = (sampleName: string) => {
     setSelectedSample(sampleName);
@@ -164,6 +167,10 @@ function App() {
         hasOutput={!!javaOutput}
         onCopy={handleCopy}
         onDownload={handleDownload}
+        springBoot={springBoot}
+        onSpringBootChange={setSpringBoot}
+        packageName={packageName}
+        onPackageNameChange={setPackageName}
       />
 
       <main className="main">

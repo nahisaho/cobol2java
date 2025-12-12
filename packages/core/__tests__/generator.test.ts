@@ -169,4 +169,74 @@ describe('JavaGenerator', () => {
       expect(result.code).toContain('import java.math.BigDecimal');
     });
   });
+
+  describe('Spring Boot generation', () => {
+    it('should generate @Service annotation', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. CUSTOMER-SERVICE.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBoot: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('@Service');
+      expect(result.code).toContain('import org.springframework.stereotype.Service');
+    });
+
+    it('should not generate main method in Spring Boot mode', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. ORDER-PROCESSOR.
+        PROCEDURE DIVISION.
+        MAIN.
+            DISPLAY "PROCESSING".
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBoot: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).not.toContain('public static void main');
+      expect(result.code).toContain('public void execute()');
+    });
+
+    it('should generate Spring Boot compatible method names', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. PAYMENT-HANDLER.
+        PROCEDURE DIVISION.
+        PROCESS-PAYMENT.
+            DISPLAY "PROCESS".
+        VALIDATE-CARD.
+            DISPLAY "VALIDATE".
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBoot: true });
+      const result = await generator.generate(ast);
+
+      // First paragraph code goes into execute(), additional paragraphs become methods
+      expect(result.code).toContain('public void execute()');
+      expect(result.code).toContain('validateCard');
+    });
+
+    it('should generate Javadoc with Spring Boot context', async () => {
+      const source = `
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. INVOICE-SERVICE.
+        PROCEDURE DIVISION.
+        MAIN.
+            STOP RUN.
+      `;
+      const ast = parser.parse(source);
+      const generator = createGenerator({ springBoot: true });
+      const result = await generator.generate(ast);
+
+      expect(result.code).toContain('Spring Boot Service');
+      expect(result.code).toContain('Can be injected into other components');
+    });
+  });
 });

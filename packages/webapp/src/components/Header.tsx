@@ -7,6 +7,10 @@ interface HeaderProps {
   hasOutput: boolean;
   onCopy: () => void;
   onDownload: () => void;
+  springBoot: boolean;
+  onSpringBootChange: (value: boolean) => void;
+  packageName: string;
+  onPackageNameChange: (value: string) => void;
 }
 
 function Header({
@@ -18,6 +22,10 @@ function Header({
   hasOutput,
   onCopy,
   onDownload,
+  springBoot,
+  onSpringBootChange,
+  packageName,
+  onPackageNameChange,
 }: HeaderProps) {
   return (
     <header className="header">
@@ -40,6 +48,24 @@ function Header({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="options-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={springBoot}
+              onChange={(e) => onSpringBootChange(e.target.checked)}
+            />
+            Spring Boot
+          </label>
+          <input
+            type="text"
+            className="package-input"
+            placeholder="Package name"
+            value={packageName}
+            onChange={(e) => onPackageNameChange(e.target.value)}
+          />
         </div>
 
         <button

@@ -59,6 +59,48 @@ body {
   align-items: center;
 }
 
+/* Options group */
+.options-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.checkbox-label:hover {
+  color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.package-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  width: 140px;
+}
+
+.package-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* Main content */
 .main {
   display: flex;
