@@ -132,6 +132,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build core first
+        run: pnpm --filter @cobol2java/core build
+
       - name: Build webapp
         run: pnpm --filter @cobol2java/webapp build
 
