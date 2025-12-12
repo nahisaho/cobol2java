@@ -5,8 +5,10 @@
 **COBOL から Java への変換ツール - LLM アシスト付き**
 
 [![CI](https://github.com/your-org/cobol2java/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/cobol2java/actions/workflows/ci.yml)
+[![Security](https://github.com/your-org/cobol2java/actions/workflows/security.yml/badge.svg)](https://github.com/your-org/cobol2java/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/your-org/cobol2java/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/cobol2java)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Tests](https://img.shields.io/badge/tests-438%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-582%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)

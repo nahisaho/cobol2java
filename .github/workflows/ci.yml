@@ -41,6 +41,18 @@ jobs:
       - name: Test
         run: pnpm test:run
 
+      - name: Test with coverage
+        if: matrix.node-version == '20.x'
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == '20.x'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
