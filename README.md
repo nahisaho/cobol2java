@@ -41,41 +41,41 @@ COBOL2Java は、レガシー COBOL コードを現代的な Java コードに�
 
 ## 📦 パッケージ構成
 
-\`\`\`
+```
 packages/
 ├── core/              # コアライブラリ (パーサー、ジェネレーター、LLM)
 ├── cli/               # コマンドラインツール
 ├── webapp/            # Webアプリケーション (React)
 └── web/               # VS Code 拡張機能
-\`\`\`
+```
 
 ## 🚀 クイックスタート
 
 ### インストール
 
-\`\`\`bash
+```bash
 git clone https://github.com/nahisaho/cobol2java.git
 cd cobol2java
 pnpm install
 pnpm build
-\`\`\`
+```
 
 ### CLI で変換
 
-\`\`\`bash
+```bash
 pnpm --filter @cobol2java/cli start -- convert input.cob -o output.java
-\`\`\`
+```
 
 ### Webアプリで変換
 
-\`\`\`bash
+```bash
 cd packages/webapp
 pnpm dev
-\`\`\`
+```
 
 ### プログラマティックAPI
 
-\`\`\`typescript
+```typescript
 import { CobolParser, JavaGenerator } from '@cobol2java/core';
 
 const parser = new CobolParser();
@@ -89,7 +89,7 @@ const generator = new JavaGenerator({
 
 const result = await generator.generate(ast);
 console.log(result.code);
-\`\`\`
+```
 
 ## 📋 サポートされるCOBOL構文
 
