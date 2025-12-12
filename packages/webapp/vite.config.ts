@@ -8,7 +8,13 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
-      external: ['vscode', 'fs', 'path', 'glob', 'node:fs', 'node:path', 'node:url', 'node:events', 'node:stream', 'node:string_decoder', 'node:fs/promises'],
+      external: [
+        'vscode',
+        'fs', 'path', 'crypto', 'stream', 'events',
+        'glob',
+        'node:fs', 'node:path', 'node:url', 'node:events', 'node:stream',
+        'node:string_decoder', 'node:fs/promises', 'node:crypto',
+      ],
     },
   },
   server: {
